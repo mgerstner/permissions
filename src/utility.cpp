@@ -128,4 +128,44 @@ bool FileCapabilities::applyToFD(int fd) const
     return true;
 }
 
+Directory::Directory(const std::string &path) :
+    m_dirname(path)
+{
+    m_stream = opendir(path.c_str());
+
+    if (!valid())
+    {
+        int errcode = errno;
+        throw FileError(errcode, path, strerror(errno));
+    }
+}
+
+Directory::~Directory()
+{
+    if (m_stream)
+    {
+        (void)closedir(m_stream);
+        m_stream = nullptr;
+    }
+}
+
+std::string Directory::next()
+{
+    errno = 0;
+    struct dirent *ent = readdir(m_stream);
+
+    if (!ent)
+    {
+        if (errno == 0)
+            // end of directory
+            return "";
+
+        // an actual error occured
+        int errcode = errno;
+        throw FileError(errcode, m_dirname, strerror(errno));
+    }
+
+    return ent->d_name;
+}
+
 // vim: et ts=4 sts=4 sw=4 :

@@ -41,7 +41,6 @@
 // C++
 #include <cassert>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -379,9 +378,9 @@ void Chkstat::collectProfilePaths()
         {
             collectPackageProfilePaths(dir + "/permissions.d");
         }
-        catch( const std::filesystem::filesystem_error &ex )
+        catch( const FileError &ex )
         {
-            if( ex.code().value() != ENOENT )
+            if( ex.getErrno() != ENOENT )
             {
                 throw;
             }
@@ -411,12 +410,15 @@ void Chkstat::collectPackageProfilePaths(const std::string &dir)
     // using the sorted set.
     std::set<std::string> files;
 
-    for (const auto &entry: std::filesystem::directory_iterator(dir))
-    {
-        if (!entry.is_regular_file())
-            continue;
+    Directory d(dir);
+    FileStatus s;
 
-        const auto &basename = entry.path().filename().string();
+    for (std::string basename = d.next(); !basename.empty(); basename = d.next())
+    {
+        s.lstat(dir + "/" + basename);
+
+        if (!s.isRegular())
+            continue;
 
         bool found_suffix = false;
 
@@ -1194,6 +1196,7 @@ int Chkstat::processEntries()
     // found in the profiles, not data modified by program logic underway.
     for (auto& [path, entry]: m_profile_entries)
     {
+        (void)path;
         EntryContext ctx;
         ctx.subpath = entry.file.substr(m_root_path.getValue().length());
 

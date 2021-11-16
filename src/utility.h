@@ -3,6 +3,7 @@
 
 // POSIX
 #include <sys/capability.h>
+#include <dirent.h>
 #include <sys/stat.h>
 
 // third party
@@ -14,6 +15,51 @@
 #include <string>
 #include <string_view>
 #include <vector>
+
+class FileError :
+    public std::exception
+{
+public:
+    FileError(int errcode, const std::string &path, const std::string &problem) :
+        m_errcode(errcode),
+        m_path(path),
+        m_problem(problem)
+    {}
+
+    int getErrno() const { return m_errcode; }
+
+    const char* what() const noexcept override
+    {
+        if( m_formatted.empty() )
+        {
+            m_formatted = m_path + ": " + m_problem + " (" + std::to_string(m_errcode) + ")";
+        }
+
+        return m_formatted.c_str();
+    }
+
+protected:
+    int m_errcode;
+    std::string m_path;
+    std::string m_problem;
+    mutable std::string m_formatted;
+};
+
+class Directory
+{
+public:
+    Directory(const std::string &path);
+    ~Directory();
+
+    //! returns empty string if no further entries exist
+    std::string next();
+
+    bool valid() const { return m_stream != nullptr; }
+
+protected:
+    const std::string m_dirname;
+    DIR *m_stream = nullptr;
+};
 
 /**
  * \brief
@@ -299,6 +345,16 @@ public:
     bool fstat(const FileDesc &fd)
     {
         return ::fstat(fd.get(), this) == 0;
+    }
+
+    bool lstat(const char* path)
+    {
+        return ::lstat(path, this) == 0;
+    }
+
+    bool lstat(const std::string &path)
+    {
+        return this->lstat(path.c_str());
     }
 };
 

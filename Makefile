@@ -6,7 +6,7 @@ CXXFLAGS=$(REQUIRED_CXXFLAGS) -g -O2
 endif
 ifdef CHKSTAT_TEST
 # for testing, add sanitizers:
-CXXFLAGS+=-fsanitize=address -fsanitize=pointer-compare -fsanitize=pointer-subtract -fsanitize=undefined
+CXXFLAGS+=-fsanitize=address -fsanitize=undefined
 endif
 # if debugging is desired then remove optimizations
 ifdef CHKSTAT_DEBUG
