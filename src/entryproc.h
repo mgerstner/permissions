@@ -106,6 +106,9 @@ protected: // functions
         return m_need_fix_perms || m_need_fix_caps || m_need_fix_ownership || m_need_fix_acl;
     }
 
+    /// Checks whether the file belongs to one of the packages defined in the entry.
+    bool matchingPkg() const;
+
 protected: // data
 
     uid_t m_file_uid = (uid_t)-1; ///< The resolved user-id corresponding to the active ProfileEntry.

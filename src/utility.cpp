@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 // local headers
@@ -13,6 +14,7 @@
 // C++
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 void splitWords(const std::string &input, std::vector<std::string> &words) {
@@ -29,6 +31,78 @@ void splitWords(const std::string &input, std::vector<std::string> &words) {
         if (!ss.fail()) {
             words.emplace_back(word);
         }
+    }
+}
+
+std::string getSubprocessOutput(const std::vector<std::string> &cmdline) {
+    // we use this exit code to indicate pre-exec errors
+    constexpr int STATUS_INTERNAL_ERROR = 125;
+    int pipe_ends[2];
+    if (::pipe(pipe_ends) != 0) {
+        throw std::runtime_error{"failed to create pipe"};
+    }
+
+    if (const auto pid = fork(); pid == 0) {
+        // child process
+
+        // close the read end of the pipe
+        ::close(pipe_ends[0]);
+        // redirect stdout to the pipe
+        if (!::dup2(pipe_ends[1], STDOUT_FILENO)) {
+            _exit(STATUS_INTERNAL_ERROR);
+        }
+
+        // close the now unnecessary copy of the write end of the pipe
+        ::close(pipe_ends[1]);
+
+        std::vector<const char*> c_cmdline;
+        for (const auto &str: cmdline) {
+            c_cmdline.push_back(str.c_str());
+        }
+        // the argument list is terminated by a NULL ptr.
+        c_cmdline.push_back(nullptr);
+        ::execvpe(c_cmdline[0], const_cast<char *const*>(c_cmdline.data()), environ);
+        // should not be reached, if new executable couldn't be run, exit with
+        // the internal error code again
+        _exit(STATUS_INTERNAL_ERROR);
+    } else {
+        // parent process
+
+        // close the write end of the pipe
+        ::close(pipe_ends[1]);
+
+        std::string ret;
+        size_t read_bytes = 0;
+        constexpr size_t IO_SIZE = 512;
+
+        // read the child's stdout until we encounter an EOF or error condition
+        while (true) {
+            ret.resize(read_bytes + IO_SIZE);
+            if (const auto res = read(pipe_ends[0], ret.data() + read_bytes, IO_SIZE); res <= 0) {
+                // error while reading or EOF encountered, stop the loop
+                ret.resize(read_bytes);
+                break;
+            } else {
+                // we got some additional data
+                read_bytes += static_cast<size_t>(res);
+            }
+        }
+
+        int status = 0;
+        if (waitpid(pid, &status, 0) < 0) {
+            throw std::runtime_error{"failed to wait on child"};
+        }
+
+        if (!WIFEXITED(status)) {
+            throw std::runtime_error{"child process exited abnormally"};
+        }
+
+        if (auto code = WEXITSTATUS(status); code != 0) {
+            // non-zero exit status, throw it
+            throw int{code};
+        }
+
+        return ret;
     }
 }
 
