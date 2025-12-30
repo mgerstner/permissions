@@ -2,17 +2,14 @@
 #
 # Maintainer: SUSE security team <security@suse.de>
 #
-# See /usr/share/permissions/permissions for general hints on how to use
-# this file.
+# See "man permissions(5)" for more information on permissions configuration
+# files.
 #
-# /usr/share/permissions/permissions.paranoid is NOT designed to be used
-# in a single-user as well as a multi-user installation, be it networked
-# or not.
-#
-# Derived from /etc/permissions.secure, it has _all_ sgid and suid bits
-# cleared - therefore, the system is probably not useable for non-privileged
-# users except for simple tasks like changing passwords and such. In addition,
-# some of the configuration files are not readable for world any more.
+# The "paranoid" profile is NOT intended to be used as is, since it will
+# disable _all_ setuid, setgid and capability bits from binaries. This will
+# likely break various use cases. The profile is intended for customization
+# via the permissions.local file to selectively assign a few privileges to
+# necessary programs but drop all the rest.
 #
 # Feel free to use this file as a basis of a system configuration that meets
 # your understanding of "secure", for the case that you're a bit paranoid.
@@ -21,12 +18,6 @@
 # is needed to have a system running flawlessly when users are present.
 # In particular, all terminal emulators will not be able to write to utmp
 # and wtmp any more, which renders who(1) and finger(1) useless.
-#
-# Please always keep in mind that your system listens on network sockets
-# in the default configuration. Change this by disabling the services that
-# you do not need or by restricting access to them using packet filters
-# or tcp wrappers (see hosts_access(5)) to gain a higher level of security
-# in your system.
 
 #
 # /etc
