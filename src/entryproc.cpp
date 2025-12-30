@@ -61,6 +61,10 @@ EntryProcessor::Result EntryProcessor::process(const bool have_proc) {
             std::cerr << m_path << ": failed to obtain ACL: " << std::strerror(errno) << std::endl;
         }
 
+        if (!matchingPkg()) {
+            return Result::ENTRY_SKIPPED;
+        }
+
         if (!checkNeedsFixing()) {
             // nothing to do
             return Result::ENTRY_GOOD;
@@ -443,6 +447,52 @@ bool EntryProcessor::applyChanges() const {
     }
 
     return ret;
+}
+
+bool EntryProcessor::matchingPkg() const {
+    if (m_entry.packages.empty())
+        // no limitation on package ownership defined
+        return true;
+
+    // This does not go through the shell so we don't need to be afraid of any
+    // special characters appearing in the path.
+    //
+    // `rpm` will also not open the actual file on disk, it will only lookup
+    // the path in its database, so any symlink attacks etc. are also no
+    // concern here.
+    //
+    // The `rpm` executable is looked up in the PATH, I suppose that is an
+    // acceptable risk, if PATH is messed up in the context of `permctl` then
+    // there are bigger things to worry about.
+    //
+    // This will return the package basename like "bash".
+    try {
+        const auto pkg = getSubprocessOutput({"rpm", "-qf", m_path, "--queryformat", "%{NAME}"});
+        const auto matches = m_entry.packages.count(pkg) != 0;
+        if (!matches && m_args.verbose.isSet()) {
+            std::cout << m_path
+                << ": file belongs to package '" << pkg << "' which does not match this entry (only suitable for: ";
+            bool first = true;
+            for (const auto &allowed: m_entry.packages) {
+                if (!first)
+                    std::cout << ", ";
+                std::cout << allowed;
+                first = false;
+            }
+            std::cout << ")" << std::endl;
+        }
+        return matches;
+    } catch (const std::runtime_error &ex) {
+        std::cerr << m_path
+            << ": internal error trying to invoke `rpm` for package ownership check: "
+            << ex.what() << std::endl;
+    } catch (const int status) {
+        std::cerr << m_path
+            << ": rpm sub-process exited with " << status << ". Cannot determine package ownership.\n";
+    }
+
+    // assume no match in error cases
+    return false;
 }
 
 // vim: et ts=4 sts=4 sw=4 :

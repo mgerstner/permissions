@@ -110,6 +110,19 @@ bool stringToUnsigned(const std::string &s, T &out, const int base = 10) {
     return true;
 }
 
+/// Create a child process executing `cmdline` and return its stdout as a std::string.
+/**
+ * This function forks and executes the given command line without going
+ * through the shell. `cmdline[0]` is used as the executable name, which can
+ * be a full path or a basename. In the latter case a lookup of the executable
+ * through the PATH environment variable will be performed.
+ *
+ * If a non-zero exit status is returned by the child process then an `int` is
+ * thrown containing the status code.
+ * On other errors a std::runtime_error is thrown.
+ **/
+std::string getSubprocessOutput(const std::vector<std::string> &cmdline);
+
 /// Helper class that wraps a plain POSIX file descriptor.
 /**
  * This wrapper takes care of closing the file descriptor upon destruction
