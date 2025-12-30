@@ -3,34 +3,15 @@
 # Maintainer: SUSE security team <security@suse.de>
 #
 # This file is used by permctl (and indirectly by various RPM scripts)
-# to check or set the modes and ownerships of files and directories in the installation.
+# to check or set the modes and ownerships of files and directories in the
+# installation.
 #
-# There is a set of files with similar meaning in a SUSE installation:
-# /usr/share/permissions/permissions  (This file)
-# /usr/share/permissions/permissions.easy
-# /usr/share/permissions/permissions.secure
-# /usr/share/permissions/permissions.paranoid
-# /etc/permissions.local
-# Please see the respective files for their meaning.
+# See "man permissions(5)" for more information on permissions configuration
+# files.
 #
-#
-# Format:
-# <file> <owner>:<group> <permission>
-#
-# How it works:
-# To change an entry, copy the line to permissions.local, modify it
-# to suit your needs and call "permctl --system"
-#
-# permctl uses the variable PERMISSION_SECURITY from
-# /etc/sysconfig/security to determine which security level to
-# apply.
-# In addition to the central files listed above the directory
-# /usr/share/permissions/permissions.d/ (deprecated) and
-# /usr/share/permissions/packages.d/ can contain permission files
-# that belong to the packages they modify file modes for. These
-# permission files are to switch between conflicting file modes of
-# the same file paths in different packages (popular example:
-# sendmail and postfix, path /usr/sbin/sendmail).
+# To modify a permission entry, copy the respective line to
+# /etc/permissions.local, modify it to suit your needs and call `permctl
+# --system` to adjust the files on disk.
 
 # utempter
 /usr/libexec/utempter/utempter                          root:utmp         2755
