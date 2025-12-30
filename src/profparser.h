@@ -8,8 +8,12 @@
 // C++
 #include <fstream>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
+
+/// A set of RPM package name strings
+using PackageSet = std::set<std::string>;
 
 /// Represents a single permissions profile entry.
 struct ProfileEntry {
@@ -20,10 +24,20 @@ struct ProfileEntry {
     mutable mode_t mode = 0;
     FileCapabilities caps;
     FileAcl acl;
+    /// The RPM package names this entry applies to.
+    /**
+     * If the set is empty then the RPM ownership of the target file is
+     * ignored and the permissions are always applied. Otherwise the
+     * permissions will only be applied if the target file is owned by one of
+     * the packages in this set.
+     **/
+    PackageSet packages;
 
     ProfileEntry() = default;
 
-    ProfileEntry(const std::string &p_file, const std::string &p_owner, const std::string &p_group, mode_t p_mode);
+    ProfileEntry(const std::string &p_file, const std::string &p_owner,
+            const std::string &p_group, mode_t p_mode,
+            const PackageSet &p_packages);
 
     bool hasCaps() const { return caps.hasCaps(); }
 
@@ -74,6 +88,9 @@ protected: // functions
     /// Parses an extra "+<keyword>" line encountered in a permission profile.
     void parseExtraLine(const std::string &line);
 
+    /// Parses a ":package:" specification line as found in permission profiles.
+    void parsePackageLine(const std::string &line);
+
     /// Parses extra "+capabilities" lines in permission profiles.
     /**
      * \param[in] line
@@ -123,6 +140,8 @@ protected: // data
         mode_t mode;
         std::vector<std::string> paths;
         std::string profile;
+        /// The currently active RPM package names which apply to newly parsed entries (can be empty).
+        PackageSet packages;
         size_t linenr;
 
         void clear() {
@@ -135,6 +154,7 @@ protected: // data
         void init(const std::string &p_profile) {
             profile = p_profile;
             linenr = 0;
+            packages.clear();
         }
     } m_parse_context;
 

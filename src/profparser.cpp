@@ -3,8 +3,9 @@
 #include "utility.h"
 
 ProfileEntry::ProfileEntry(const std::string &p_file, const std::string &p_owner,
-            const std::string &p_group, mode_t p_mode) :
-            file(p_file), owner(p_owner), group(p_group), mode(p_mode) {
+            const std::string &p_group, mode_t p_mode,
+            const PackageSet &p_packages) :
+            file(p_file), owner(p_owner), group(p_group), mode(p_mode), packages(p_packages) {
     // By default make the ACL equal to the basic mode, this way the ACL
     // object can be used for assigning ACLs, even if no ACL is configured in
     // the profile.
@@ -23,6 +24,7 @@ void ProfileParser::parse(const std::string &path, std::ifstream &fs) {
 
     // we're parsing lines of the following format here:
     //
+    // :package: <pkgname>[,<pkgname>] # comment
     // # comment
     // <path> <user>:<group> <mode>
     // [+capabilities cap_net_raw=ep]
@@ -38,6 +40,9 @@ void ProfileParser::parse(const std::string &path, std::ifstream &fs) {
 
         if (line[0] == '+') {
             parseExtraLine(line);
+            continue;
+        } else if (hasPrefix(line, ":package:")) {
+            parsePackageLine(line);
             continue;
         }
 
@@ -66,6 +71,45 @@ void ProfileParser::parse(const std::string &path, std::ifstream &fs) {
 
         addCurrentEntries();
     }
+}
+
+void ProfileParser::parsePackageLine(const std::string &line) {
+        auto parts = splitWords(line);
+
+        if (parts[0] != ":package:") {
+            printDiagnostic("bad :package: line");
+            return;
+        } else if (parts.size() < 2) {
+            printDiagnostic("missing package list");
+            return;
+        } else if (parts.size() > 2 && parts[2][0] != '#') {
+            // we ignore any trailing comments which can be used for
+            // documentation purposes here (e.g. review bsc#)
+            // but we don't accept random trailing garbage
+            printDiagnostic("unexpected field encountered after package names");
+            return;
+        }
+
+        // reset current package context and fill it with the new information
+        m_parse_context.packages.clear();
+
+        auto packages = parts[1];
+
+        // parse comma separate list of packages
+        while (!packages.empty()) {
+            auto sep = packages.find_last_of(',');
+            if (sep == packages.npos)
+                // last package name remaining
+                sep = 0;
+            const auto package = packages.substr(sep ? sep + 1 : 0);
+            // a double comma could lead to an empty component here, ignore it
+            if (!package.empty()) {
+                m_parse_context.packages.insert(package);
+            }
+            // clear string starting from the separator position (or the whole
+            // string, if no separator present).
+            packages.erase(sep);
+        }
 }
 
 void ProfileParser::parseExtraLine(const std::string &line) {
@@ -175,7 +219,8 @@ void ProfileParser::addCurrentEntries() {
         // applied is important
         auto res = m_entries.insert_or_assign(path, ProfileEntry{
                 path, m_parse_context.user,
-                m_parse_context.group, m_parse_context.mode});
+                m_parse_context.group, m_parse_context.mode,
+                m_parse_context.packages});
 
         m_active_entries.push_back(res.first);
     }

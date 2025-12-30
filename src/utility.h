@@ -92,6 +92,13 @@ bool matchesAny(const T &val, const SEQ &seq) {
 /// Splits up the `input` string into whitespace separated words and stores them in `words`.
 void splitWords(const std::string &input, std::vector<std::string> &words);
 
+/// Variant of splitWords() which returns the result by value.
+inline std::vector<std::string> splitWords(const std::string &input) {
+    std::vector<std::string> ret;
+    splitWords(input, ret);
+    return ret;
+}
+
 template <typename T>
 bool stringToUnsigned(const std::string &s, T &out, const int base = 10) {
     char *end = nullptr;
