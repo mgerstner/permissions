@@ -1,8 +1,6 @@
+# Copyright (c) 2026 SUSE Software Solutions Germany GmbH
 #
-# Copyright (c) 2001 SuSE GmbH Nuernberg, Germany.  All rights reserved.
-#
-# Author: Roman Drahtmueller <draht@suse.de>, 2001
-#
+# Maintainer: SUSE security team <security@suse.de>
 #
 # See /usr/share/permissions/permissions for general hints on how to use this
 # file.

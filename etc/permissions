@@ -1,9 +1,6 @@
-# /usr/share/permissions/permissions
+# Copyright (c) 2026 SUSE Software Solutions Germany GmbH
 #
-# Copyright (c) 2001 SuSE GmbH Nuernberg, Germany.
-# Copyright (c) 2011 SUSE Linux Products GmbH Nuernberg, Germany.
-#
-# Author: Roman Drahtmueller <draht@suse.de>, 2001
+# Maintainer: SUSE security team <security@suse.de>
 #
 # This file is used by permctl (and indirectly by various RPM scripts)
 # to check or set the modes and ownerships of files and directories in the installation.
