@@ -2,12 +2,12 @@
 .\"     Title: permissions
 .\"    Author: [see the "AUTHORS" section]
 .\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
-.\"      Date: 05/22/2024
+.\"      Date: 01/02/2026
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "PERMISSIONS" "5" "05/22/2024" "\ \&" "\ \&"
+.TH "PERMISSIONS" "5" "01/02/2026" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -35,12 +35,13 @@ The permctl(8) program sets permissions and ownerships of files according to the
 .SH "DESCRIPTION"
 .SS "File Format"
 .sp
-The files /usr/share/permissions/permissions\&.* are line based and space delimited\&. Lines starting with \*(Aq#\*(Aq are comments\&. A file entry consists of a line of the format
+The files /usr/share/permissions/permissions\&.* are line based and whitespace delimited\&. Lines starting with \*(Aq#\*(Aq are comments\&. A permissions entry consists of lines of the following format:
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
+:package: pkg1[,pkg2\&.\&.\&.]
 /path/to/file user:group 0755
  +capabilities cap_net_admin=ep
  +acl user:somebody:rwx
@@ -49,6 +50,8 @@ The files /usr/share/permissions/permissions\&.* are line based and space delimi
 .RE
 .\}
 .sp
+The main part of an entry is the file path specification as seen in the second line, which consists of three whitespace separated columns:
+.sp
 .RS 4
 .ie n \{\
 \h'-04'\(bu\h'+03'\c
@@ -57,7 +60,7 @@ The files /usr/share/permissions/permissions\&.* are line based and space delimi
 .sp -1
 .IP \(bu 2.3
 .\}
-The first column specifies the file name\&. Directory names must end with a slash\&.
+The first column specifies the file path\&. Directory paths must end with a slash\&.
 .RE
 .sp
 .RS 4
@@ -68,7 +71,7 @@ The first column specifies the file name\&. Directory names must end with a slas
 .sp -1
 .IP \(bu 2.3
 .\}
-The second column specifies the file owner and group delimited by a
+The second column specifies the designated file owner and group delimited by a
 \*(Aq:\*(Aq
 character\&.
 .RE
@@ -81,7 +84,7 @@ character\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-The third column specifies the file mode in octal\&.
+The third column specifies the designated file mode in octal\&.
 .RE
 .sp
 Basic file entries can be extended by immediately following lines starting with +<keyword>\&. The following keywords are supported:
@@ -96,13 +99,16 @@ grant Linux capabilities to the file\&. The string specified here must conform t
 .RS 4
 grant additional access control list (ACL) entries to the file\&. The string specified here must conform to the rules found in
 \fIacl(5)\fR
-(section ACL TEXT FORMS)\&. The ACL entries will be merged with the basic octal file mode, therefore they must not contain any permissions for the file owner, group or other\&. If a file has extended ACL entries assigned, but none are configured in the permissions configuration, the extended ACL entries will be removed by
+(section ACL TEXT FORMS)\&. The ACL entries will be merged with the basic octal file mode, therefore they must not contain any permissions for the file owner, group or other\&. If a file has extended ACL entries assigned on disk, but none are configured in the permissions configuration, the extended ACL entries will be removed by
 permctl(8)\&.
 .RE
 .sp
-The file name in the first column of the base entry can contain contain variables as defined in the \fIvariables\&.conf\fR file\&. A variable expands to one or more alternative path segments that relate to the same program or file\&. permctl will look in each possible path resulting from the variable expansion and apply the permissions accordingly\&.
+The optional :package: directive allows to restrict following path entries to files owned by the given comma separated list of packages\&. The designated permissions will then only be assigned to the target file if it is owned by one of the specified packages according to the RPM system database\&. This setting is in effect for all subsequent permission entries in the file until another :package: directive is encountered\&. Entries appearing before any :package: line will always be applied without inspecting target file package ownership\&.
 .sp
-The variables\&.conf file will ignore empty lines, whitespace only lines or comment lines starting with \*(Aq#\*(Aq\&. All other lines must contain variable definitions that follow the syntax \fBmyvar = /path/1 /path/2\fR\&. This example will declare a variable identified as myvar that will expand to both specified path segments\&.
+The file name in the first column of the base entry can contain contain variables as defined in the \fIvariables\&.conf\fR file\&. A variable expands to one or more alternative path segments that relate to the same program or file\&. permctl will look in each possible path resulting from the variable expansion and apply the permissions accordingly\&.
+.SS "Path Variable Expansion via variables\&.conf"
+.sp
+The \fIvariables\&.conf\fR file will ignore empty lines, whitespace only lines or comment lines starting with \*(Aq#\*(Aq\&. All other lines must contain variable definitions that follow the syntax \*(Aqmyvar = /path/1 /path/2\*(Aq\&. This example will declare a variable identified as myvar that will expand to both specified path segments\&.
 .sp
 Path segments appearing in variable assignments need to be separated by whitespace characters\&. The path values cannot contain whitespace themselves\&. The variable identifier is limited to alphanumeric characters and the underscore character\&.
 .sp
@@ -135,6 +141,11 @@ While the following are invalid:
 .RE
 .\}
 .SS "Configuration File Locations"
+.PP
+\fB/usr/share/permissions/variables\&.conf\fR
+.RS 4
+contains variable expansion definitions\&.
+.RE
 .sp
 The permctl program, when run in \-\-system mode, will assemble a set of configuration entries depending on the profiles configured in \fI/etc/sysconfig/security\fR\&. The order of files parsed (with increasing priority) is as follows:
 .PP
@@ -159,7 +170,7 @@ contains local per\-system extra entries or overrides managed by the system admi
 .RE
 .SS "Available Predefined Profiles"
 .sp
-The permissions package ships the following predefines profiles:
+The permissions package ships the following predefined profiles:
 .PP
 \fBeasy\fR
 .RS 4
@@ -212,6 +223,32 @@ This will cause `permctl `to try and apply the given permission to all of the fo
 /lib64/prog_v1/libsomething\&.so
 /lib/prog_v2/libsomething\&.so
 /lib64/prog_v2/libsomething\&.so
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+The following example shows the effect of the :package: directive:
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+# this entry will always be applied regardless of which package owns \*(Aqsome_program\*(Aq\&.
+/usr/bin/some_program root:root 04755
+
+:package: sudo
+# this entry will only be applied if /usr/bin/sudo is owned by the "sudo" package\&.
+/usr/bin/sudo root:root 04755
+
+# this entry would also be applied only if owned by the "sudo" package, since
+# no new ":package:" directive appeared\&.
+/usr/bin/another_program root:root 04755
+
+:package: su
+# with the new package directive this entry will only be applied if
+# /usr/bin/su is owned by the "su" package\&.
+/usr/bin/su root:root 04755
 .fi
 .if n \{\
 .RE
