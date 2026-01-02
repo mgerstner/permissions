@@ -35,9 +35,6 @@
 # the same file paths in different packages (popular example:
 # sendmail and postfix, path /usr/sbin/sendmail).
 
-# utempter
-/usr/libexec/utempter/utempter                          root:utmp         2755
-
 # ceph log directory (bsc#1150366)
 /var/log/ceph/                                          ceph:ceph         3770
 
