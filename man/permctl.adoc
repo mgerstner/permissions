@@ -4,7 +4,7 @@ PERMCTL(8)
 NAME
 ----
 
-permctl - tool to check and set system wide file permissions
+permctl - tool to check and set system-wide file permissions
 
 SYNOPSIS
 --------
@@ -16,14 +16,25 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-The program __/usr/bin/permctl__ is a tool to check and set file permissions. It
-was previously called `chkstat`, but has been renamed to better describe its
-purpose.
+The program __/usr/bin/permctl__ is a tool to check and set file permissions.
+It was previously called `chkstat`, but has been renamed to better describe
+its purpose.
 
-permctl can either operate in system mode or on individually specified
-permission files. In system mode, the file __/etc/sysconfig/security__
+`permctl` can either operate in system mode or on individually specified
+`permissions(5)` files. In system mode, the file __/etc/sysconfig/security__
 determines which profile to use and whether to actually apply permission
-changes.
+changes. When explicit file paths are specified in system mode, then only the
+permissions of the given paths will be checked and adjusted. If no paths are
+specified then all paths listed in the configured permissions profiles will be
+processed.
+
+The main purpose of `permctl` is to manage security-sensitive file permissions
+like setuid-root bits, capability bits or access control lists (ACL) in the
+system. The `permissions` configuration files allow to adjust these file
+permissions to match the user's needs. The system-wide `permissions` profiles
+also act as a gatekeeping mechanism in SUSE distributions. Packages may not
+install security-sensitive programs (which e.g. carry a setuid-root bit) when
+they are not listed in the permissions profiles.
 
 OPTIONS
 -------
@@ -43,7 +54,7 @@ OPTIONS
   Opposite of --set, i.e. warn only, but don't make actual changes.
 *--noheader*::
   Omit printing the output header lines which describe the configuration files
-  used by permctl.
+  used by `permctl`.
 *--fscaps, --no-fscaps*::
   Enable or disable use of file based capabilities. In system mode the setting of
   _PERMISSIONS_FSCAPS_ determines whether capabilities are applied, when this
@@ -57,6 +68,14 @@ OPTIONS
   contain the file paths to check, one per line.
 *--root <directory>*::
   Check files relative to the specified directory.
+*--config-root <dir>*::
+  Lookup configuration files relative to the given root directory. This is
+  only intended for testing purposes.
+*--level "level1 [level2...]"*::
+  Force the application of the given security level(s) e.g. "local paranoid"
+  would apply the local and paranoid permission profiles. This overrides the
+  settings found in __/etc/sysconfig/security__ (only supported in --system
+  mode).
 
 ENVIRONMENT VARIABLES
 ---------------------
@@ -69,9 +88,10 @@ ENVIRONMENT VARIABLES
 EXIT STATUS
 -----------
 
-permctl returns 1 if any fatal errors have been encountered that prevented it
-from determining or adjusting file permissions. It returns 2 if *--warn* was
-given and one or more entries need fixing. In all other cases it returns 0.
+`permctl` returns 1 if any fatal errors have been encountered that prevented
+it from determining or adjusting file permissions. It returns 2 if *--warn*
+was given and one or more entries need fixing. In all other cases it returns
+0.
 
 EXAMPLES
 --------
@@ -99,7 +119,7 @@ COPYRIGHT
 
  1996-2003 SuSE Linux AG, Nuernberg, Germany.
  2008-2019 SUSE LINUX Products GmbH
- 2019-2024 SUSE Software Solutions Germany GmbH
+ 2019-2026 SUSE Software Solutions Germany GmbH
 
 AUTHORS
 -------
