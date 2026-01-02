@@ -63,7 +63,6 @@
 # needs setuid root when using shadow via NIS:
 # #216816
 /usr/sbin/unix_chkpwd                                   root:shadow       0755
-/usr/sbin/unix2_chkpwd                                  root:shadow       0755
 
 # squid changes from bnc#891268
 # - adjusted paths in bsc#1171569
