@@ -159,7 +159,7 @@ class TestBasePermissions(TestBase):
         })
 
         # the mode should be the same for all profiles
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             for p in testpaths:
                 self.printMode(p)
 
@@ -298,9 +298,9 @@ class TestLocalPermissions(TestBase):
 
         # this should take precendence over all other entries
         line = self.buildProfileLine(testdir, local_perms[0])
-        global_entries[self.m_local_profile] = [line]
+        global_entries[self.local_profile] = [line]
         line = self.buildProfileLine(testfile, local_perms[1])
-        pkg_entries[self.m_local_profile] = [line]
+        pkg_entries[self.local_profile] = [line]
 
         self.addProfileEntries(global_entries)
         self.addPackageProfileEntries(package, pkg_entries)
@@ -328,7 +328,7 @@ class TestDefaultProfile(TestBase):
         super().__init__("checks whether the default profile is correctly selected")
         # if no profile is explicitly configured then this one should
         # be implicitly selected by permctl
-        self.m_default_profile = "secure"
+        self.default_profile = "secure"
 
     def run(self):
 
@@ -368,7 +368,7 @@ class TestDefaultProfile(TestBase):
         self.switchSystemProfile("")
         self.applySystemProfile()
 
-        for path, mode in zip(testpaths, modes[self.m_default_profile]):
+        for path, mode in zip(testpaths, modes[self.default_profile]):
             self.assertMode(path, mode)
 
         print()
@@ -423,11 +423,11 @@ class TestCommandLineBase(TestBase):
 
         self.addPackageProfileEntries(package, entries)
 
-        self.m_global_testpaths = global_testpaths
-        self.m_pkg_testpaths = pkg_testpaths
-        self.m_testpaths = self.m_global_testpaths + self.m_pkg_testpaths
-        self.m_modes = modes
-        self.m_testdir_root = testdir_root
+        self.global_testpaths = global_testpaths
+        self.pkg_testpaths = pkg_testpaths
+        self.testpaths = self.global_testpaths + self.pkg_testpaths
+        self.modes = modes
+        self.testdir_root = testdir_root
 
 
 class TestForceProfile(TestCommandLineBase):
@@ -441,15 +441,15 @@ class TestForceProfile(TestCommandLineBase):
         self.setupTest()
 
         forced_level = "paranoid"
-        expected_modes = self.m_modes[forced_level] * 2
+        expected_modes = self.modes[forced_level] * 2
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             # independently of the configured system profile, the
             # forced level should always be applied
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--level", forced_level])
 
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 self.assertMode(path, mode)
 
 
@@ -463,15 +463,15 @@ class TestWarnMode(TestCommandLineBase):
         self.setupTest()
 
         init_profile = "easy"
-        expected_modes = self.m_modes[init_profile] * 2
+        expected_modes = self.modes[init_profile] * 2
         self.switchSystemProfile(init_profile)
         self.applySystemProfile()
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--warn"])
 
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 # modes should never change after the initial switch
                 self.assertMode(path, mode)
 
@@ -489,25 +489,25 @@ class TestExamineSwitch(TestCommandLineBase):
         init_profile = "easy"
         self.switchSystemProfile(init_profile)
         self.applySystemProfile()
-        expected_modes = self.m_modes[init_profile] * 2
+        expected_modes = self.modes[init_profile] * 2
 
         # choose an arbitrary config item for the test
         examine_index = 0  # 0 is for the dir, 1 is for the file mode
-        examine_path = self.m_testpaths[2]
+        examine_path = self.testpaths[2]
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--examine", examine_path])
 
             # only examine_path should now be changed, all else
             # should stay at "easy" level
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 if path != examine_path:
                     self.assertMode(path, mode)
                 else:
                     # the --examine path should be
                     # switched to the according profile
-                    self.assertMode(path, self.m_modes[profile][examine_index])
+                    self.assertMode(path, self.modes[profile][examine_index])
 
 
 class TestRootSwitch(TestCommandLineBase):
@@ -518,7 +518,7 @@ class TestRootSwitch(TestCommandLineBase):
 
     def run(self):
         self.setupTest()
-        caps_file = self.m_testdir_root + "/caps_test"
+        caps_file = self.testdir_root + "/caps_test"
         caps_profile = "easy"
         caps = ["cap_net_admin=ep"]
         self.createTestFile(caps_file, 0o755)
@@ -529,26 +529,26 @@ class TestRootSwitch(TestCommandLineBase):
         })
         self.switchSystemProfile(init_profile)
         self.applySystemProfile()
-        expected_modes = self.m_modes[init_profile] * 2
+        expected_modes = self.modes[init_profile] * 2
 
         # now only operate on the alternative root directory
         alt_root = "/altroot"
         os.mkdir(alt_root)
         # copy over our configured entries to the alt root
-        shutil.copytree(self.m_testdir_root, alt_root + self.m_testdir_root)
+        shutil.copytree(self.testdir_root, alt_root + self.testdir_root)
 
-        alt_testpaths = [alt_root + path for path in self.m_testpaths]
+        alt_testpaths = [alt_root + path for path in self.testpaths]
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--root", alt_root])
 
             # the original root should be unaltered
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 self.assertMode(path, mode)
 
             # the alternative root should be accordingly adjusted
-            for path, mode in zip(alt_testpaths, self.m_modes[profile] * 2):
+            for path, mode in zip(alt_testpaths, self.modes[profile] * 2):
                 self.assertMode(path, mode)
 
             if profile == caps_profile:
@@ -576,24 +576,24 @@ class TestFilesSwitch(TestCommandLineBase):
 
         # write a custom profile file only affected one of the paths
         # present in the other profiles
-        testpath = self.m_testpaths[0]
+        testpath = self.testpaths[0]
         mode_index = 0
         files_path = "/tmp/files.list"
         with open(files_path, 'w') as files_file:
             files_file.write(testpath + "\n")
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--files", files_path])
 
             # modes should always be the same: easy profiles for
             # everything but the testpath, which should be at
             # the mode for the current profile
-            for path, mode in zip(self.m_testpaths, self.m_modes[init_profile] * 2):
+            for path, mode in zip(self.testpaths, self.modes[init_profile] * 2):
                 if path != testpath:
                     self.assertMode(path, mode)
                 else:
-                    self.assertMode(path, self.m_modes[profile][mode_index])
+                    self.assertMode(path, self.modes[profile][mode_index])
 
             print()
 
@@ -606,7 +606,7 @@ class TestCapabilities(TestBase):
 
     def run(self):
 
-        if not self.m_main_test_instance.haveCapSupport():
+        if not self.main_test_instance.haveCapSupport():
             self.printWarning("Cannot set file capabilities in user namespaces on this kernel. It only works starting from version 4.14")
             return
 
