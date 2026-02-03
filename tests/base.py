@@ -181,7 +181,7 @@ class PermctlRegtest:
         )
 
         self.m_parser.add_argument('buildtree', default='build-regtest',
-           help="The meson build tree to use.", nargs='?')
+                                   help="The meson build tree to use.", nargs='?')
 
         self.m_parser.add_argument(
             "--skip-build", action='store_true',
@@ -1153,7 +1153,7 @@ class TestBase:
             )
             return
 
-        subprocess.check_output( [setfacl, '-m', perms, path])
+        subprocess.check_output([setfacl, '-m', perms, path])
 
     def callPermctl(self, args):
         """Calls permctl passing the given command line arguments. The

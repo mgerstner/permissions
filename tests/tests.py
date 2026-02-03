@@ -6,6 +6,7 @@ import shutil
 
 from base import TestBase, ConfigLocation
 
+
 class TestNoErrorIfNotExisting(TestBase):
 
     def __init__(self):
@@ -14,7 +15,6 @@ class TestNoErrorIfNotExisting(TestBase):
     def run(self):
         testdir = self.createAndGetTestDir(0o770)
         testfile = os.path.sep.join((testdir, "testfile"))
-        testpaths = (testdir, testfile)
 
         modes = {
             "easy": (0o750, 0o740),
@@ -38,7 +38,6 @@ class TestNoErrorIfNotExisting(TestBase):
             res, output = self.applySystemProfile()
             if res != 0:
                 self.printError("applying system profile", profile, "for non-existent file failed")
-
 
 
 class TestCorrectMode(TestBase):
@@ -672,15 +671,15 @@ class TestACLs(TestBase):
         profile = "easy"
 
         entries = {
-                profile: [
-                    self.buildProfileLine(file_missing_acl, 0o444, acl="user:nobody:rwx"),
-                    self.buildProfileLine(file_mismatch_acl, 0o444, acl="user:nobody:rwx"),
-                    self.buildProfileLine(file_extra_acl, 0o444),
-                    self.buildProfileLine(file_basic_acl, 0o755, acl="user::rw-,group::rw-,other::rw-"),
-                    self.buildProfileLine(file_acl_and_cap, 0o444,
-                                          acl=["user:nobody:rw-", "user:bin:--x"],
-                                          caps=["cap_net_admin=ep"])
-                ]
+            profile: [
+                self.buildProfileLine(file_missing_acl, 0o444, acl="user:nobody:rwx"),
+                self.buildProfileLine(file_mismatch_acl, 0o444, acl="user:nobody:rwx"),
+                self.buildProfileLine(file_extra_acl, 0o444),
+                self.buildProfileLine(file_basic_acl, 0o755, acl="user::rw-,group::rw-,other::rw-"),
+                self.buildProfileLine(file_acl_and_cap, 0o444,
+                                      acl=["user:nobody:rw-", "user:bin:--x"],
+                                      caps=["cap_net_admin=ep"])
+            ]
         }
 
         self.addProfileEntries(entries)
@@ -721,7 +720,6 @@ class TestACLs(TestBase):
 
         if self.getMode(path) != mode:
             self.printError(label, ": basic mode of file is unexpected", sep='')
-
 
     def printACL(self, entries):
         print("found", len(entries), "entries:")
