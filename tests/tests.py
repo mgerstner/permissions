@@ -84,7 +84,7 @@ class TestCorrectMode(TestBase):
 class TestCorrectOwner(TestBase):
 
     def __init__(self):
-        super().__init__("checks whether file owner/group assignments are corectly applied as configured")
+        super().__init__("checks whether file owner/group assignments are correctly applied as configured")
 
     def run(self):
 
@@ -645,7 +645,7 @@ class TestACLs(TestBase):
 
     def __init__(self):
 
-        super().__init__("checks whether managment of ACLs works as expected")
+        super().__init__("checks whether management of ACLs works as expected")
 
     def run(self):
 
