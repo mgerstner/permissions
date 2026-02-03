@@ -561,6 +561,14 @@ class PermctlRegtest:
             self.permissions_repo, permissions_repo_dst,
         )
 
+        # bind-mount our fake rpm script into /usr/bin
+        # /usr/local/bin won't do in case there's RPM installed in the host
+        fake_rpm = os.path.dirname(__file__) + "/rpm.py"
+        self.bindMount(fake_rpm, self.fake_root + "/usr/bin/rpm", read_only=True, recursive=False)
+
+        # create an empty data area for the fake RPM to use
+        self.mountTmpFS(self.fake_root + "/var/lib/rpm")
+
         self.mountTmpFS(self.fake_root + "/usr/local")
         local_bin = self.fake_root + self.getPermctlPath()
         os.makedirs(os.path.dirname(local_bin), exist_ok=True)
@@ -873,6 +881,10 @@ class TestBase:
             except FileNotFoundError:
                 pass
 
+        # create an empty fake RPM database
+        with open("/var/lib/rpm/Packages.db", 'w') as _:
+            pass
+
         # permctl expects the base files to exist, otherwise warnings
         # are emitted
         self.createTestFile(central_perms, 0o644)
@@ -912,8 +924,13 @@ class TestBase:
                 for line in lines:
                     profile_file.write(line + "\n")
 
-    def buildProfileLine(self, path, mode, owner="root", group="root", caps=[], acl=[]):
-        ret = "{} {}:{} {}".format(
+    def buildProfileLine(self, path, mode, owner="root", group="root", caps=[], acl=[], packages=[]):
+        ret = ""
+
+        if packages:
+            ret += ":package: {}\n".format(','.join(packages if isinstance(packages, list) else [packages]))
+
+        ret += "{} {}:{} {}".format(
             path, owner, group,
             format(mode, '04o')
         )
@@ -1240,3 +1257,7 @@ class TestBase:
         if line.find("LeakSanitizer: detected memory leaks") != -1:
             self.printError("ASAN found memory leaks!")
             self.errors += 1
+
+    def addRpmDbEntry(self, pkg, path):
+        with open("/var/lib/rpm/Packages.db", 'a') as rpmdb:
+            rpmdb.write(f"{pkg} {path}\n")

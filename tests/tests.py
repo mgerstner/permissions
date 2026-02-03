@@ -1440,6 +1440,61 @@ class TestVariableApplication(TestVariablesBase):
                     print("Mode of", fpath, "has been adjusted correctly")
 
 
+class TestPackageCoupling(TestBase):
+
+    def __init__(self):
+        super().__init__("checks whether package coupling of profile entries works as expected")
+
+    def run(self):
+
+        testdir = self.createAndGetTestDir(0o770)
+        # a file owned by no package, but we expect ownership
+        self.createTestFile(f"{testdir}/no-pkg", 0o440)
+        # a file owned by the wrong package
+        self.createTestFile(f"{testdir}/wrong-pkg", 0o440)
+        # a file owned by a single package which matches
+        self.createTestFile(f"{testdir}/single-pkg", 0o440)
+        # a file owned by multiple packages of which one matches
+        self.createTestFile(f"{testdir}/multi-pkg-match", 0o440)
+        # a file owned by multiple packages of which none matches
+        self.createTestFile(f"{testdir}/multi-pkg-mismatch", 0o440)
+
+        entries = []
+
+        entries.append(self.buildProfileLine(f"{testdir}/no-pkg", 0o775, packages="pkg1"))
+        # leave out packages= here, the previous pkg restriction should still apply here
+        entries.append(self.buildProfileLine(f"{testdir}/wrong-pkg", 0o775))
+        entries.append(self.buildProfileLine(f"{testdir}/single-pkg", 0o775))
+        # check if multi-package assignment in the profiles works as well as
+        # multi-package ownership in RPM. Use something different to pkg1 here
+        # to make sure the previous package setting is no longer in effect.
+        entries.append(self.buildProfileLine(f"{testdir}/multi-pkg-match", 0o775, packages=["pkg2", "pkg3"]))
+        entries.append(self.buildProfileLine(f"{testdir}/multi-pkg-mismatch", 0o775))
+
+        self.addRpmDbEntry("pkg1", f"{testdir}/single-pkg")
+        self.addRpmDbEntry("pkg2", f"{testdir}/wrong-pkg")
+        self.addRpmDbEntry("pkg1", f"{testdir}/multi-pkg-match")
+        self.addRpmDbEntry("pkg3", f"{testdir}/multi-pkg-match")
+        self.addRpmDbEntry("pkg1", f"{testdir}/multi-pkg-mismatch")
+        self.addRpmDbEntry("pkg4", f"{testdir}/multi-pkg-mismatch")
+
+        self.addProfileEntries({"easy": entries})
+
+        for name in ("single-pkg", "wrong-pkg", "multi-pkg-match", "multi-pkg-mismatch"):
+            self.printMode(f"{testdir}/{name}")
+
+        self.switchSystemProfile("easy")
+        self.applySystemProfile()
+
+        # these should all be left untouched
+        self.assertMode(f"{testdir}/no-pkg", 0o440)
+        self.assertMode(f"{testdir}/wrong-pkg", 0o440)
+        self.assertMode(f"{testdir}/multi-pkg-mismatch", 0o440)
+        # these should be corrected
+        self.assertMode(f"{testdir}/single-pkg", 0o775)
+        self.assertMode(f"{testdir}/multi-pkg-match", 0o775)
+
+
 tests = (
     TestNoErrorIfNotExisting,
     TestCorrectMode,
@@ -1466,5 +1521,6 @@ tests = (
     TestSymlinkDirBehaviour,
     TestVariableParsing,
     TestVariableApplication,
-    TestACLs
+    TestACLs,
+    TestPackageCoupling
 )
