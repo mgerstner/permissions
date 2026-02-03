@@ -471,7 +471,22 @@ bool EntryProcessor::matchingPkg() const {
     // queryformat. splitWords() will take care of the trailing space at the
     // end of the list.
     try {
-        const auto output = getSubprocessOutput({"rpm", "-qf", m_path, "--queryformat", "%{NAME} "});
+        int code;
+        const auto output = getSubprocessOutput({"rpm", "-qf", m_path, "--queryformat", "%{NAME} "}, code);
+
+        if (code != 0) {
+            /*
+             * RPM exits with status 1 here and displays the "error" message
+             * on stdout.
+             */
+            if (output.find("is not owned by any package") != output.npos) {
+                return false;
+            }
+
+            std::cerr << m_path << ": rpm sub-process exited with " << code << ". Cannot determine package ownership.\n";
+            return false;
+        }
+
         const auto pkgs = splitWords(output);
 
         for (const auto &pkg: pkgs) {
@@ -506,9 +521,6 @@ bool EntryProcessor::matchingPkg() const {
         std::cerr << m_path
             << ": internal error trying to invoke `rpm` for package ownership check: "
             << ex.what() << std::endl;
-    } catch (const int status) {
-        std::cerr << m_path
-            << ": rpm sub-process exited with " << status << ". Cannot determine package ownership.\n";
     }
 
     // assume no match in error cases
