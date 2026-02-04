@@ -12,12 +12,19 @@
 #
 # /etc
 #
-/etc/exports                                            root:root          644
+# files not owned by any package
 /etc/fstab                                              root:root          644
+
+:package: netcfg
+/etc/exports                                            root:root          644
+
+:package: nfs-kernel-server # from nfs-utils
 /var/lib/nfs/rmtab                                      root:root          644
+
+:package: syslogd
 /etc/syslog.conf                                        root:root          600
-# we might want to tighten that up in the future in this profile (remove the
-# ability for others to read/enter)
+
+:package: cron # from cronie
 /etc/cron.d/                                            root:root          755
 /etc/cron.daily/                                        root:root          755
 /etc/cron.hourly/                                       root:root          755
@@ -28,80 +35,71 @@
 # suid system programs that need the suid bit to work:
 #
 # disable at and cron for users that do not belong to the group "trusted"
+:package: at
 /usr/bin/at                                             root:trusted      4750
+
+:package: cronie
 /usr/bin/crontab                                        root:trusted      4750
+
+:package: shadow
 /usr/bin/gpasswd                                        root:shadow       4755
 /usr/bin/newgrp                                         root:root         4755
+
+:package: sudo
 /usr/bin/sudo                                           root:root         4755
+
+:package: su-wrapper
 /usr/sbin/su-wrapper                                    root:root         0755
-# #331020
+
+:package: nfs-client # nfs-utils (bsc#331020)
 /usr/sbin/mount.nfs                                     root:root         0755
-#
-# #133657
+
+:package: fuse # bsc#133657
 /usr/bin/fusermount                                     root:trusted      4750
-# needs setuid root when using shadow via NIS:
-# #216816
+
+:package: pam # bsc#216816, needs setuid root when using shadow via NIS
 /usr/sbin/unix_chkpwd                                   root:shadow       4755
 
-# squid changes from bnc#891268
-# - adjusted paths in bsc#1171569
+:package: squid # bsc#891268, bsc#1171569
 /var/cache/squid/                                       squid:root        0750
 /var/log/squid/                                         squid:root        0750
 /usr/libexec/squid/pinger                               root:squid        0750
  +capabilities cap_net_raw=ep
 
-#
-# mixed section: most of it is disabled in this permissions.secure:
-#
-# xawtv (kind of reviewed via bsc#1171655)
+:package: v4l-conf # xawtv (bsc#1171655)
 /usr/bin/v4l-conf                                       root:video        4750
 
-# turned off write and wall by disabling sgid tty:
+# note: wall also exists in busybox-misc, but setgid doesn't feel like a good
+# idea for busybox.
+:package: util-linux-tty-tools # from util-linux
 /usr/bin/wall                                           root:tty          0755
 /usr/bin/write                                          root:tty          0755
-# thttpd (bsc#1171580)
+
+:package: thttpd # bsc#1171580
 /usr/bin/makeweb                                        root:www          2751
-# pcmcia:
-# Needs setuid to eject cards (#100120)
+
+:package: pcmciautils # pcmcia (bsc#100120), needed to eject cards
 /usr/sbin/pccardctl                                     root:trusted      4750
 
-# libgnomesu (#75823, #175616)
+:package: libgnomesu # bsc#75823, bsc#175616
 /usr/libexec/libgnomesu/gnomesu-pam-backend             root:root         4755
 
-#
-# networking (need root for the privileged socket)
-#
+:package: iputils # needs privileged socket access
 /usr/bin/clockdiff                                      root:root         0755
  +capabilities cap_net_raw=p
-# mtr
+:package: mtr
 /usr/sbin/mtr-packet                                    root:root         0755
 
-# exim
+:package: exim
 /usr/sbin/exim                                          root:root         4755
 
-#
-# linux text console utilities
-#
-# setuid needed on the text console to set the terminal content on ctrl-o
-# #66112
+:package: mc # bsc#66112, needed to set the terminal content on ctrl-o
 /usr/libexec/mc/cons.saver                              root:root         0755
 
-
-#
-# terminal emulators
-# This and future SUSE products have support for the utempter, a small helper
-# program that does the utmp/wtmp update work with the necessary rights.
-# The use of utempter obsoletes the need for sgid bits on terminal emulator
-# binaries. We mention screen here, but all other terminal emulators have
-# moved to /etc/permissions, with modes set to 0755.
-
-# needs setuid to access /dev/console
-# framebuffer terminal emulator (japanese)
+:package: jfbterm # framebuffer terminal emulator (japanese), access to /dev/console
 /usr/bin/jfbterm                                        root:tty          0755
 
-#
-# amanda
-#
+:package: amanda
 /usr/libexec/amanda/calcsize                            root:amanda       0750
 /usr/libexec/amanda/rundump                             root:amanda       0750
 /usr/libexec/amanda/runtar                              root:amanda       0750
@@ -111,28 +109,21 @@
 /usr/libexec/amanda/application/amgtar                  root:amanda       0750
 /usr/libexec/amanda/application/amstar                  root:amanda       0750
 
-
-#
-# news (inn)
-#
 # the inn start script changes it's uid to news:news. Later innbind
 # is called by this user. Those programs do not need to be called by
 # anyone else, therefore the strange permissions 4554 are required
-# for operation. (#67032, #594393)
-#
+# for operation.
+:package: inn, mininews # bsc#67032, bsc#594393
 /usr/libexec/news/bin/rnews                             news:uucp         4550
 /usr/libexec/news/bin/inews                             news:news         2555
+:package: inn
 /usr/libexec/news/bin/innbind                           root:news         4550
 
-#
-# sendfax
-#
+:package: sendfax # from mgetty
 /usr/libexec/mgetty+sendfax/faxq-helper                 fax:trusted       4750
 /var/spool/fax/outgoing/                                fax:root          0755
 
-#
-# uucp
-#
+:package: uucp
 /var/spool/uucppublic/                                  root:uucp         1770
 /usr/bin/uucp                                           uucp:uucp         6555
 /usr/bin/uuname                                         uucp:uucp         6555
@@ -141,149 +132,149 @@
 /usr/libexec/uucp/uucico                                uucp:uucp         6555
 /usr/libexec/uucp/uuxqt                                 uucp:uucp         6555
 
-
-# polkit new (bnc#523377)
+:package: polkit # bsc#523377
 /usr/libexec/polkit-1/polkit-agent-helper-1             root:root         4755
+:package: pkexec # from polkit
 /usr/bin/pkexec                                         root:root         4755
 
-# dbus-1 (#333361 #1056764, bsc#1171164)
+:package: dbus-1-daemon # dbus-1 (bsc#333361, bsc#1056764, bsc#1171164)
 /usr/libexec/dbus-1/dbus-daemon-launch-helper           root:messagebus   4750
 
-# policycoreutils (#440596)
+:package: policycoreutils-newrole # policycoreutils (bsc#440596)
 /usr/bin/newrole                                        root:root         0755
 
-# VirtualBox (#429725, bsc#1120650)
+# virtualbox (bsc#429725, bsc#1120650, bsc#533550, bsc#669055, bsc#1033425)
+:package: virtualbox-qt
 /usr/lib/virtualbox/VirtualBoxVM                        root:vboxusers    0750
-/usr/lib/virtualbox/VBoxHeadless                        root:vboxusers    0755
 /usr/lib/virtualbox/VBoxSDL                             root:vboxusers    0755
-# (bnc#533550)
+:package: virtualbox
+/usr/lib/virtualbox/VBoxHeadless                        root:vboxusers    0755
 /usr/lib/virtualbox/VBoxNetAdpCtl                       root:vboxusers    0755
-# bnc#669055
 /usr/lib/virtualbox/VBoxNetDHCP                         root:vboxusers    0755
-# bsc#1033425
 /usr/lib/virtualbox/VBoxNetNAT                          root:vboxusers    0755
 
+:package: open-vm-tools-desktop # open-vm-tools (bsc#474285)
+/usr/bin/vmware-user-suid-wrapper                       root:root         0755
 
-# open-vm-tools (bnc#474285)
-/usr/bin/vmware-user-suid-wrapper			root:root         0755
-
-# hawk (bnc#665045)
+:package: hawk2 # hawk (bnc#665045)
 /usr/sbin/hawk_chkpwd                                   root:haclient     4750
 
-# ecryptfs-utils (bnc#740110)
+:package: ecryptfs-utils # bsc#740110
 /usr/sbin/mount.ecryptfs_private                        root:root         0755
 
-# wireshark (bsc#957624)
-/usr/bin/dumpcap					root:wireshark	  0750
+:package: wireshark # bsc#957624
+/usr/bin/dumpcap                                        root:wireshark    0750
  +capabilities cap_net_raw,cap_net_admin=ep
 
+:package: util-linux
 /usr/bin/su                                             root:root         4755
 /usr/bin/mount                                          root:root         4755
 /usr/bin/umount                                         root:root         4755
 
-# cdrecord of cdrtools from Joerg Schilling (bnc#550021)
 # in secure mode, no provisions are made for reliable cd burning, as admins
 # will have very likely prohibited that anyway.
-/usr/bin/cdrecord                                       root:root       755
+:package: cdrecord # schily (bsc#550021)
+/usr/bin/cdrecord                                       root:root          755
 
-# qemu-bridge-helper (bnc#765948, bsc#988279)
-/usr/libexec/qemu-bridge-helper			root:kvm	04750
+:package: qemu-tools # qemu (bsc#765948, bsc#988279)
+/usr/libexec/qemu-bridge-helper                         root:kvm         04750
 
-#iouyap (bnc#904060)
-/usr/libexec/iouyap					root:iouyap	0750
+:package: iouyap # bsc#904060
+/usr/libexec/iouyap                                     root:iouyap       0750
 
-# gstreamer ptp (bsc#960173)
-/usr/libexec/gstreamer-1.0/gst-ptp-helper		root:root	0755
+:package: gstreamer # bsc#960173
+/usr/libexec/gstreamer-1.0/gst-ptp-helper               root:root         0755
  +capabilities cap_net_bind_service=ep
 
-# kwayland (bsc#1062182)
-/usr/bin/kwin_wayland					root:root	0755
+:package: kwin6 # kwayland (bsc#1062182)
+/usr/bin/kwin_wayland                                   root:root         0755
  +capabilities cap_sys_nice=ep
 
-# gvfs (bsc#1065864)
-/usr/libexec/gvfs/gvfsd-nfs                             root:root       0755
+:package: gvfs-backends # gvfs (bsc#1065864)
+/usr/libexec/gvfs/gvfsd-nfs                             root:root         0755
 
-# icinga2 (bsc#1069410)
-/run/icinga2/cmd/					icinga:icingacmd 2750
+:package: icinga2 # (bsc#1069410)
+/run/icinga2/cmd/                                       icinga:icingacmd  2750
 
-# usbauth (bsc#1066877)
+:package: usbauth-notifier # usbauth (bsc#1066877)
 /usr/libexec/usbauth-npriv                              root:usbauth    04750
 /usr/libexec/usbauth-notifier/                          root:usbauth-notifier  0750
 /usr/libexec/usbauth-notifier/usbauth-notifier          root:usbauth    02755
 
-# spice-gtk (bsc#1101420)
+:package: libspice-client-glib-helper # spice-gtk (bsc#1101420)
 /usr/bin/spice-client-glib-usb-acl-helper               root:kvm        04750
 
-# smc-tools (bsc#1102956)
+:package: smc-tools # bsc#1102956
 %{lib_dirs}/libsmc-preload.so                           root:root       04755
 
-# lxc (bsc#988348)
+:package: liblxc1 # lxc (bsc#988348)
 /usr/libexec/lxc/lxc-user-nic                           root:kvm        04750
 
-# firejail (bsc#1059013)
+:package: firejail # bsc#1059013
 /usr/bin/firejail                                       root:firejail   04750
 
-# authbind (bsc#1111251)
+:package: authbind # bsc#1111251
 /usr/libexec/authbind/helper                            root:root       04755
 
-# fuse3 (bsc#1111230)
+:package: fuse3 # bsc#1111230
 /usr/bin/fusermount3                                    root:trusted    04750
 
-# 389-ds (bsc#1111564)
-/usr/sbin/ns-slapd					root:dirsrv	0750
+:package: 389-ds # bsc#1111564
+/usr/sbin/ns-slapd                                      root:dirsrv      0750
  +capabilities cap_net_bind_service=ep
 
-# nagios (bsc#1028975)
+:package: nagios # bsc#1028975
 /var/spool/nagios/                                      nagios:nagcmd   2775
 
-# ksysguard network helper (bsc#1151190)
+:package: libksysguard6-plugins # bsc#1151190
 /usr/libexec/ksysguard/ksgrd_network_helper             root:root       0755
  +capabilities cap_net_raw=ep
 
-# mariadb auth_pam_tool (bsc#1160285)
+:package: mariadb # bsc#1160285
 %{lib_dirs}/mysql/plugin/auth_pam_tool_dir/auth_pam_tool root:root      4755
 
-# Workload Memory Protection (bsc#1161335)
+:package: sapwmp # Workload Memory Protection (bsc#1161335), only present in SAP
 %{libexec_dirs}/sapwmp/sapwmp-capture                   root:sapsys    4750
 
-# s390-tools log directory for ts-shell (bsc#1167163)
+:package: s390-tools # bsc#1167163, only packaged on s390
 /var/log/ts-shell/                                      root:ts-shell     2770
 
-# setuid bit for cockpit (bsc#1169614)
+:package: cockpit-ws # cockpit (bsc#1169614)
 /usr/libexec/cockpit-session                            root:cockpit-wsinstance  4750
 
-# binary that launches texlive tools with group "mktex" (bsc#1171686)
+:package: texlive-kpathsea-bin # texlive (bsc#1171686)
 /usr/libexec/mktex/public                               root:mktex 2755
 
-# enlightenment privileged desktop operations (bsc#1169238)
+:package: enlightenment # privileged desktop operations (bsc#1169238)
 %{lib_dirs}/enlightenment/utils/enlightenment_system     root:root  4755
 
-# physlock (bsc#1175720, not suited for world access)
+:package: physlock # bsc#1175720; not suitable for world access
 /usr/bin/physlock                                       root:root  0755
 
-# xorg-x11-server (bsc#1175867)
+:package: xorg-x11-server-wrapper # xorg-x11-server (bsc#1175867)
 /usr/bin/Xorg.wrap                                      root:root 4755
 
-# please (bsc#1183669)
+:package: pleaser # please (bsc#1183669)
 /usr/bin/please                                         root:root 4755
 /usr/bin/pleaseedit                                     root:root 4755
 
-# postfix (bsc#1201385)
+:package: postfix, postfix-bdb # bsc#1201385
 /usr/sbin/postlog                                       root:maildrop 2755
 
 # kismet (bsc#1200954, bsc#1207654)
+:package: kismet-capture-linux-bluetooth
 /usr/bin/kismet_cap_linux_bluetooth                     root:kismet 0750
  +capabilities cap_net_raw,cap_net_admin=ep
-
+:package: kismet-capture-linux-wifi
 /usr/bin/kismet_cap_linux_wifi                          root:kismet 0750
  +capabilities cap_net_raw,cap_net_admin=ep
 
-# libgtop(bsc#1218921)
+:package: libgtop # bsc#1218921
 /usr/libexec/libgtop_server2                            root:root 4755
 
-# nvidia-modprobe (bsc#1230950)
+:package: nvidia-modprobe # bsc#1230950
 /usr/bin/nvidia-modprobe                                root:root 4755
 
-# OpenSMTPD (bsc#1247781)
+:package: OpenSMTPD # bsc#1247781
 /usr/libexec/opensmtpd/lockspool                        root:root 4755
 /usr/sbin/smtpctl                                       root:_smtpq 2755
