@@ -14,7 +14,6 @@
 #
 # /etc
 #
-/etc/crontab                                            root:root          600
 /etc/exports                                            root:root          644
 /etc/fstab                                              root:root          644
 /var/lib/nfs/rmtab                                      root:root          644

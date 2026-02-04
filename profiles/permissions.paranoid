@@ -22,7 +22,6 @@
 #
 # /etc
 #
-/etc/crontab                                            root:root          600
 /etc/exports                                            root:root          600
 /etc/fstab                                              root:root          600
 /var/lib/nfs/rmtab                                      root:root          600
