@@ -6,6 +6,7 @@ import shutil
 
 from base import TestBase, ConfigLocation
 
+
 class TestNoErrorIfNotExisting(TestBase):
 
     def __init__(self):
@@ -14,7 +15,6 @@ class TestNoErrorIfNotExisting(TestBase):
     def run(self):
         testdir = self.createAndGetTestDir(0o770)
         testfile = os.path.sep.join((testdir, "testfile"))
-        testpaths = (testdir, testfile)
 
         modes = {
             "easy": (0o750, 0o740),
@@ -38,7 +38,6 @@ class TestNoErrorIfNotExisting(TestBase):
             res, output = self.applySystemProfile()
             if res != 0:
                 self.printError("applying system profile", profile, "for non-existent file failed")
-
 
 
 class TestCorrectMode(TestBase):
@@ -85,7 +84,7 @@ class TestCorrectMode(TestBase):
 class TestCorrectOwner(TestBase):
 
     def __init__(self):
-        super().__init__("checks whether file owner/group assignments are corectly applied as configured")
+        super().__init__("checks whether file owner/group assignments are correctly applied as configured")
 
     def run(self):
 
@@ -160,7 +159,7 @@ class TestBasePermissions(TestBase):
         })
 
         # the mode should be the same for all profiles
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             for p in testpaths:
                 self.printMode(p)
 
@@ -299,9 +298,9 @@ class TestLocalPermissions(TestBase):
 
         # this should take precendence over all other entries
         line = self.buildProfileLine(testdir, local_perms[0])
-        global_entries[self.m_local_profile] = [line]
+        global_entries[self.local_profile] = [line]
         line = self.buildProfileLine(testfile, local_perms[1])
-        pkg_entries[self.m_local_profile] = [line]
+        pkg_entries[self.local_profile] = [line]
 
         self.addProfileEntries(global_entries)
         self.addPackageProfileEntries(package, pkg_entries)
@@ -329,7 +328,7 @@ class TestDefaultProfile(TestBase):
         super().__init__("checks whether the default profile is correctly selected")
         # if no profile is explicitly configured then this one should
         # be implicitly selected by permctl
-        self.m_default_profile = "secure"
+        self.default_profile = "secure"
 
     def run(self):
 
@@ -369,7 +368,7 @@ class TestDefaultProfile(TestBase):
         self.switchSystemProfile("")
         self.applySystemProfile()
 
-        for path, mode in zip(testpaths, modes[self.m_default_profile]):
+        for path, mode in zip(testpaths, modes[self.default_profile]):
             self.assertMode(path, mode)
 
         print()
@@ -424,11 +423,11 @@ class TestCommandLineBase(TestBase):
 
         self.addPackageProfileEntries(package, entries)
 
-        self.m_global_testpaths = global_testpaths
-        self.m_pkg_testpaths = pkg_testpaths
-        self.m_testpaths = self.m_global_testpaths + self.m_pkg_testpaths
-        self.m_modes = modes
-        self.m_testdir_root = testdir_root
+        self.global_testpaths = global_testpaths
+        self.pkg_testpaths = pkg_testpaths
+        self.testpaths = self.global_testpaths + self.pkg_testpaths
+        self.modes = modes
+        self.testdir_root = testdir_root
 
 
 class TestForceProfile(TestCommandLineBase):
@@ -442,15 +441,15 @@ class TestForceProfile(TestCommandLineBase):
         self.setupTest()
 
         forced_level = "paranoid"
-        expected_modes = self.m_modes[forced_level] * 2
+        expected_modes = self.modes[forced_level] * 2
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             # independently of the configured system profile, the
             # forced level should always be applied
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--level", forced_level])
 
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 self.assertMode(path, mode)
 
 
@@ -464,15 +463,15 @@ class TestWarnMode(TestCommandLineBase):
         self.setupTest()
 
         init_profile = "easy"
-        expected_modes = self.m_modes[init_profile] * 2
+        expected_modes = self.modes[init_profile] * 2
         self.switchSystemProfile(init_profile)
         self.applySystemProfile()
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--warn"])
 
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 # modes should never change after the initial switch
                 self.assertMode(path, mode)
 
@@ -490,25 +489,25 @@ class TestExamineSwitch(TestCommandLineBase):
         init_profile = "easy"
         self.switchSystemProfile(init_profile)
         self.applySystemProfile()
-        expected_modes = self.m_modes[init_profile] * 2
+        expected_modes = self.modes[init_profile] * 2
 
         # choose an arbitrary config item for the test
         examine_index = 0  # 0 is for the dir, 1 is for the file mode
-        examine_path = self.m_testpaths[2]
+        examine_path = self.testpaths[2]
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--examine", examine_path])
 
             # only examine_path should now be changed, all else
             # should stay at "easy" level
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 if path != examine_path:
                     self.assertMode(path, mode)
                 else:
                     # the --examine path should be
                     # switched to the according profile
-                    self.assertMode(path, self.m_modes[profile][examine_index])
+                    self.assertMode(path, self.modes[profile][examine_index])
 
 
 class TestRootSwitch(TestCommandLineBase):
@@ -519,7 +518,7 @@ class TestRootSwitch(TestCommandLineBase):
 
     def run(self):
         self.setupTest()
-        caps_file = self.m_testdir_root + "/caps_test"
+        caps_file = self.testdir_root + "/caps_test"
         caps_profile = "easy"
         caps = ["cap_net_admin=ep"]
         self.createTestFile(caps_file, 0o755)
@@ -530,26 +529,26 @@ class TestRootSwitch(TestCommandLineBase):
         })
         self.switchSystemProfile(init_profile)
         self.applySystemProfile()
-        expected_modes = self.m_modes[init_profile] * 2
+        expected_modes = self.modes[init_profile] * 2
 
         # now only operate on the alternative root directory
         alt_root = "/altroot"
         os.mkdir(alt_root)
         # copy over our configured entries to the alt root
-        shutil.copytree(self.m_testdir_root, alt_root + self.m_testdir_root)
+        shutil.copytree(self.testdir_root, alt_root + self.testdir_root)
 
-        alt_testpaths = [alt_root + path for path in self.m_testpaths]
+        alt_testpaths = [alt_root + path for path in self.testpaths]
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--root", alt_root])
 
             # the original root should be unaltered
-            for path, mode in zip(self.m_testpaths, expected_modes):
+            for path, mode in zip(self.testpaths, expected_modes):
                 self.assertMode(path, mode)
 
             # the alternative root should be accordingly adjusted
-            for path, mode in zip(alt_testpaths, self.m_modes[profile] * 2):
+            for path, mode in zip(alt_testpaths, self.modes[profile] * 2):
                 self.assertMode(path, mode)
 
             if profile == caps_profile:
@@ -577,24 +576,24 @@ class TestFilesSwitch(TestCommandLineBase):
 
         # write a custom profile file only affected one of the paths
         # present in the other profiles
-        testpath = self.m_testpaths[0]
+        testpath = self.testpaths[0]
         mode_index = 0
         files_path = "/tmp/files.list"
         with open(files_path, 'w') as files_file:
             files_file.write(testpath + "\n")
 
-        for profile in self.m_profiles:
+        for profile in self.profiles:
             self.switchSystemProfile(profile)
             self.applySystemProfile(["--files", files_path])
 
             # modes should always be the same: easy profiles for
             # everything but the testpath, which should be at
             # the mode for the current profile
-            for path, mode in zip(self.m_testpaths, self.m_modes[init_profile] * 2):
+            for path, mode in zip(self.testpaths, self.modes[init_profile] * 2):
                 if path != testpath:
                     self.assertMode(path, mode)
                 else:
-                    self.assertMode(path, self.m_modes[profile][mode_index])
+                    self.assertMode(path, self.modes[profile][mode_index])
 
             print()
 
@@ -607,7 +606,7 @@ class TestCapabilities(TestBase):
 
     def run(self):
 
-        if not self.m_main_test_instance.haveCapSupport():
+        if not self.main_test_instance.haveCapSupport():
             self.printWarning("Cannot set file capabilities in user namespaces on this kernel. It only works starting from version 4.14")
             return
 
@@ -646,7 +645,7 @@ class TestACLs(TestBase):
 
     def __init__(self):
 
-        super().__init__("checks whether managment of ACLs works as expected")
+        super().__init__("checks whether management of ACLs works as expected")
 
     def run(self):
 
@@ -672,15 +671,15 @@ class TestACLs(TestBase):
         profile = "easy"
 
         entries = {
-                profile: [
-                    self.buildProfileLine(file_missing_acl, 0o444, acl="user:nobody:rwx"),
-                    self.buildProfileLine(file_mismatch_acl, 0o444, acl="user:nobody:rwx"),
-                    self.buildProfileLine(file_extra_acl, 0o444),
-                    self.buildProfileLine(file_basic_acl, 0o755, acl="user::rw-,group::rw-,other::rw-"),
-                    self.buildProfileLine(file_acl_and_cap, 0o444,
-                                          acl=["user:nobody:rw-", "user:bin:--x"],
-                                          caps=["cap_net_admin=ep"])
-                ]
+            profile: [
+                self.buildProfileLine(file_missing_acl, 0o444, acl="user:nobody:rwx"),
+                self.buildProfileLine(file_mismatch_acl, 0o444, acl="user:nobody:rwx"),
+                self.buildProfileLine(file_extra_acl, 0o444),
+                self.buildProfileLine(file_basic_acl, 0o755, acl="user::rw-,group::rw-,other::rw-"),
+                self.buildProfileLine(file_acl_and_cap, 0o444,
+                                      acl=["user:nobody:rw-", "user:bin:--x"],
+                                      caps=["cap_net_admin=ep"])
+            ]
         }
 
         self.addProfileEntries(entries)
@@ -721,7 +720,6 @@ class TestACLs(TestBase):
 
         if self.getMode(path) != mode:
             self.printError(label, ": basic mode of file is unexpected", sep='')
-
 
     def printACL(self, entries):
         print("found", len(entries), "entries:")
@@ -1442,6 +1440,61 @@ class TestVariableApplication(TestVariablesBase):
                     print("Mode of", fpath, "has been adjusted correctly")
 
 
+class TestPackageCoupling(TestBase):
+
+    def __init__(self):
+        super().__init__("checks whether package coupling of profile entries works as expected")
+
+    def run(self):
+
+        testdir = self.createAndGetTestDir(0o770)
+        # a file owned by no package, but we expect ownership
+        self.createTestFile(f"{testdir}/no-pkg", 0o440)
+        # a file owned by the wrong package
+        self.createTestFile(f"{testdir}/wrong-pkg", 0o440)
+        # a file owned by a single package which matches
+        self.createTestFile(f"{testdir}/single-pkg", 0o440)
+        # a file owned by multiple packages of which one matches
+        self.createTestFile(f"{testdir}/multi-pkg-match", 0o440)
+        # a file owned by multiple packages of which none matches
+        self.createTestFile(f"{testdir}/multi-pkg-mismatch", 0o440)
+
+        entries = []
+
+        entries.append(self.buildProfileLine(f"{testdir}/no-pkg", 0o775, packages="pkg1"))
+        # leave out packages= here, the previous pkg restriction should still apply here
+        entries.append(self.buildProfileLine(f"{testdir}/wrong-pkg", 0o775))
+        entries.append(self.buildProfileLine(f"{testdir}/single-pkg", 0o775))
+        # check if multi-package assignment in the profiles works as well as
+        # multi-package ownership in RPM. Use something different to pkg1 here
+        # to make sure the previous package setting is no longer in effect.
+        entries.append(self.buildProfileLine(f"{testdir}/multi-pkg-match", 0o775, packages=["pkg2", "pkg3"]))
+        entries.append(self.buildProfileLine(f"{testdir}/multi-pkg-mismatch", 0o775))
+
+        self.addRpmDbEntry("pkg1", f"{testdir}/single-pkg")
+        self.addRpmDbEntry("pkg2", f"{testdir}/wrong-pkg")
+        self.addRpmDbEntry("pkg1", f"{testdir}/multi-pkg-match")
+        self.addRpmDbEntry("pkg3", f"{testdir}/multi-pkg-match")
+        self.addRpmDbEntry("pkg1", f"{testdir}/multi-pkg-mismatch")
+        self.addRpmDbEntry("pkg4", f"{testdir}/multi-pkg-mismatch")
+
+        self.addProfileEntries({"easy": entries})
+
+        for name in ("single-pkg", "wrong-pkg", "multi-pkg-match", "multi-pkg-mismatch"):
+            self.printMode(f"{testdir}/{name}")
+
+        self.switchSystemProfile("easy")
+        self.applySystemProfile()
+
+        # these should all be left untouched
+        self.assertMode(f"{testdir}/no-pkg", 0o440)
+        self.assertMode(f"{testdir}/wrong-pkg", 0o440)
+        self.assertMode(f"{testdir}/multi-pkg-mismatch", 0o440)
+        # these should be corrected
+        self.assertMode(f"{testdir}/single-pkg", 0o775)
+        self.assertMode(f"{testdir}/multi-pkg-match", 0o775)
+
+
 tests = (
     TestNoErrorIfNotExisting,
     TestCorrectMode,
@@ -1468,5 +1521,6 @@ tests = (
     TestSymlinkDirBehaviour,
     TestVariableParsing,
     TestVariableApplication,
-    TestACLs
+    TestACLs,
+    TestPackageCoupling
 )

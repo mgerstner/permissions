@@ -34,9 +34,10 @@ void splitWords(const std::string &input, std::vector<std::string> &words) {
     }
 }
 
-std::string getSubprocessOutput(const std::vector<std::string> &cmdline) {
+std::string getSubprocessOutput(const std::vector<std::string> &cmdline, int &code) {
     // we use this exit code to indicate pre-exec errors
     constexpr int STATUS_INTERNAL_ERROR = 125;
+    code = STATUS_INTERNAL_ERROR;
     int pipe_ends[2];
     if (::pipe(pipe_ends) != 0) {
         throw std::runtime_error{"failed to create pipe"};
@@ -97,10 +98,7 @@ std::string getSubprocessOutput(const std::vector<std::string> &cmdline) {
             throw std::runtime_error{"child process exited abnormally"};
         }
 
-        if (auto code = WEXITSTATUS(status); code != 0) {
-            // non-zero exit status, throw it
-            throw int{code};
-        }
+        code = WEXITSTATUS(status);
 
         return ret;
     }

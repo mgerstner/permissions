@@ -117,11 +117,12 @@ bool stringToUnsigned(const std::string &s, T &out, const int base = 10) {
  * be a full path or a basename. In the latter case a lookup of the executable
  * through the PATH environment variable will be performed.
  *
- * If a non-zero exit status is returned by the child process then an `int` is
- * thrown containing the status code.
- * On other errors a std::runtime_error is thrown.
+ * On process setup, I/O errors or unusual child termination a
+ * std::runtime_error is thrown.
+ *
+ * The `code` parameter receives the child exit code (0 on success).
  **/
-std::string getSubprocessOutput(const std::vector<std::string> &cmdline);
+std::string getSubprocessOutput(const std::vector<std::string> &cmdline, int &code);
 
 /// Helper class that wraps a plain POSIX file descriptor.
 /**

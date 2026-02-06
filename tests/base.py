@@ -59,37 +59,37 @@ class ColorPrinter:
 
     def __init__(self):
 
-        self.m_use_colors = os.isatty(sys.stdout.fileno())
-        if not self.m_use_colors and "FORCE_COLOR" in os.environ:
+        self.use_colors = os.isatty(sys.stdout.fileno())
+        if not self.use_colors and "FORCE_COLOR" in os.environ:
             # allow override via environment, for example when run
             # in Jenkins with ANSI color plugin support.
-            self.m_use_colors = True
+            self.use_colors = True
 
     def flush(self):
         sys.stdout.flush()
 
     def reset(self):
-        if self.m_use_colors:
+        if self.use_colors:
             print(u"\u001b[0m", end='')
 
     def setRed(self):
-        if self.m_use_colors:
+        if self.use_colors:
             print(u"\u001b[31m", end='')
 
     def setYellow(self):
-        if self.m_use_colors:
+        if self.use_colors:
             print(u"\u001b[33m", end='')
 
     def setGreen(self):
-        if self.m_use_colors:
+        if self.use_colors:
             print(u"\u001b[32m", end='')
 
     def setCyan(self):
-        if self.m_use_colors:
+        if self.use_colors:
             print(u"\u001b[36m", end='')
 
     def setMagenta(self):
-        if self.m_use_colors:
+        if self.use_colors:
             print(u"\u001b[35m", end='')
 
 
@@ -123,16 +123,16 @@ class PermctlRegtest:
         self.setupArgParser()
 
         perm_root = os.path.realpath(__file__).split(os.path.sep)[:-2]
-        self.m_permissions_repo = os.path.sep.join(perm_root)
+        self.permissions_repo = os.path.sep.join(perm_root)
 
-        if not self.m_args.buildtree.startswith(os.path.sep):
-            self.m_args.buildtree = os.path.sep.join([self.m_permissions_repo, self.m_args.buildtree])
+        if not self.args.buildtree.startswith(os.path.sep):
+            self.args.buildtree = os.path.sep.join([self.permissions_repo, self.args.buildtree])
 
-        self.m_permctl_orig = os.path.sep.join([self.m_args.buildtree, "permctl"])
+        self.permctl_orig = os.path.sep.join([self.args.buildtree, "permctl"])
 
     def printDebug(self, *args, **kwargs):
 
-        if not self.m_args.debug:
+        if not self.args.debug:
             return
 
         color_printer.setCyan()
@@ -141,59 +141,59 @@ class PermctlRegtest:
 
     def setupArgParser(self):
 
-        self.m_parser = argparse.ArgumentParser(
+        self.parser = argparse.ArgumentParser(
             description="Regression test suite for the permctl program"
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--enter-fakeroot", action='store_true',
             help="Instead of running tests, just enter a shell in the fake test root file system"
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--on-error-enter-shell", action='store_true',
             help="If any test fails or throws an exception then before continuing execution a shell will be entered in the fake root."
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--after-test-enter-shell", action='store_true',
             help="Enter the fake root after the test(s) finished executing."
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--list-tests", action='store_true',
             help="Just list the available tests"
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--test", type=str,
             help="Instead of all tests tun only the given test. For names see --list-tests."
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--debug", action='store_true',
             help="Add some debugging output regarding the test seuite itself."
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--build-debug", action='store_true',
             help="Build a more debug friendly version of permctl to make tracking down bugs in `gdb` easier"
         )
 
-        self.m_parser.add_argument('buildtree', default='build-regtest',
-           help="The meson build tree to use.", nargs='?')
+        self.parser.add_argument('buildtree', default='build-regtest',
+                                   help="The meson build tree to use.", nargs='?')
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--skip-build", action='store_true',
             help="By default the regtest tries to (re)build the permctl binary. If this switch is set then whichever binary is currently found will be used."
         )
 
-        self.m_parser.add_argument(
+        self.parser.add_argument(
             "--skip-proc", action='store_true',
             help="Run permctl without a mounted /proc to test these special permctl code paths that deal with that condition. This is only really useful in old code streams that attempt to mount their own /proc for backwards compatibility."
         )
 
-        self.m_args = self.m_parser.parse_args()
+        self.args = self.parser.parse_args()
 
     def ensureForkedNamespace(self):
         """This function reexecutes the current script in a forked user and
@@ -208,22 +208,22 @@ class PermctlRegtest:
 
         unshare_cmdline = [unshare, "-p", "-f", "-m", "-U"]
 
-        self.m_sub_id_supported = self.checkSubIDSupport()
+        self.sub_id_supported = self.checkSubIDSupport()
 
-        if self.m_sub_id_supported:
+        if self.sub_id_supported:
             # this tells the child process to wait for us to map
             # the sub*ids before actually doing anything
             os.environ[self.WAIT_FOR_SUBID_MAP_ENV_MARKER] = "1"
             # also forward the sub uids and gids to use, to avoid
             # the child having to parse stuff again
-            os.environ[self.SUB_UID_RANGE_ENV_VAR] = "{}:{}".format(*self.m_sub_uid_range)
-            os.environ[self.SUB_GID_RANGE_ENV_VAR] = "{}:{}".format(*self.m_sub_gid_range)
+            os.environ[self.SUB_UID_RANGE_ENV_VAR] = "{}:{}".format(*self.sub_uid_range)
+            os.environ[self.SUB_GID_RANGE_ENV_VAR] = "{}:{}".format(*self.sub_gid_range)
         else:
             # without sub-*id support let unshare map the root
             # user only
             unshare_cmdline.append("-r")
             color_printer.setYellow()
-            print("no user namespace sub-uid/sub-gid support detected:", self.m_sub_id_error)
+            print("no user namespace sub-uid/sub-gid support detected:", self.sub_id_error)
             print("won't be able to run certain tests reyling on chown()/chgrp()")
             color_printer.reset()
 
@@ -242,7 +242,7 @@ class PermctlRegtest:
             shell=False
         )
 
-        if self.m_sub_id_supported:
+        if self.sub_id_supported:
             try:
                 self.setupChildSubIdMapping(proc)
             except Exception as e:
@@ -257,10 +257,10 @@ class PermctlRegtest:
         sys.exit(res)
 
     def haveSubIdSupport(self):
-        return self.m_sub_id_supported
+        return self.sub_id_supported
 
     def haveCapSupport(self):
-        return self.m_have_caps_support
+        return self.have_caps_support
 
     def checkSubIDSupport(self):
         """Checks whether it's basically possible to employ
@@ -276,16 +276,16 @@ class PermctlRegtest:
 
         for f in (subuid, subgid):
             if not os.path.exists(f):
-                self.m_sub_id_error = "{} is not existing".format(f)
+                self.sub_id_error = "{} is not existing".format(f)
                 return False
 
         # the setuid-root helpers for sub-*id mappings are also
         # required
-        self.m_newuidmap = shutil.which("newuidmap")
-        self.m_newgidmap = shutil.which("newgidmap")
+        self.newuidmap = shutil.which("newuidmap")
+        self.newgidmap = shutil.which("newgidmap")
 
-        if not self.m_newuidmap or not self.m_newgidmap:
-            self.m_sub_id_error = "{} or {} command(s) not existing".format(self.m_newuidmap, self.m_newgidmap)
+        if not self.newuidmap or not self.newgidmap:
+            self.sub_id_error = "{} or {} command(s) not existing".format(self.newuidmap, self.newgidmap)
             return False
 
         # finally we need an entry for the current user and group in
@@ -297,14 +297,14 @@ class PermctlRegtest:
         sub_gid_ranges = self.collectSubIDRanges(subgid, our_uid, our_user)
 
         if not sub_uid_ranges or not sub_gid_ranges:
-            self.m_sub_id_error = "no sub-uid and/or sub-gid range configured for uid {} / username {}".format(our_uid, our_user)
+            self.sub_id_error = "no sub-uid and/or sub-gid range configured for uid {} / username {}".format(our_uid, our_user)
             return False
         elif len(sub_uid_ranges) > 1 or len(sub_gid_ranges) > 1:
-            self.m_sub_id_error = "more than one sub-uid/sub-gid entry for this account. Can't decide which one to use. Found uid ranges: {}, gid ranges: {}".format(sub_uid_ranges, sub_gid_ranges)
+            self.sub_id_error = "more than one sub-uid/sub-gid entry for this account. Can't decide which one to use. Found uid ranges: {}, gid ranges: {}".format(sub_uid_ranges, sub_gid_ranges)
             return False
 
-        self.m_sub_uid_range = sub_uid_ranges[0]
-        self.m_sub_gid_range = sub_gid_ranges[0]
+        self.sub_uid_range = sub_uid_ranges[0]
+        self.sub_gid_range = sub_gid_ranges[0]
 
         return True
 
@@ -335,8 +335,8 @@ class PermctlRegtest:
         mapped."""
 
         for helper, main_id, sub_ids in (
-            (self.m_newuidmap, os.getuid(), self.m_sub_uid_range),
-            (self.m_newgidmap, os.getgid(), self.m_sub_gid_range)
+            (self.newuidmap, os.getuid(), self.sub_uid_range),
+            (self.newgidmap, os.getgid(), self.sub_gid_range)
         ):
             helper_cmdline = [
                 helper, str(child.pid),
@@ -399,14 +399,14 @@ class PermctlRegtest:
         except KeyError:
             gid_range = None
 
-        self.m_sub_id_supported = uid_range is not None and gid_range is not None
+        self.sub_id_supported = uid_range is not None and gid_range is not None
 
-        if not self.m_sub_id_supported:
+        if not self.sub_id_supported:
             self.printDebug("no sub*-id support detected")
             return
 
-        self.m_sub_uid_range = uid_range.split(':')
-        self.m_sub_gid_range = gid_range.split(':')
+        self.sub_uid_range = uid_range.split(':')
+        self.sub_gid_range = gid_range.split(':')
         self.printDebug("Detected sub*-id support, uid range = {}, gid range = {}".format(uid_range, gid_range))
 
     def waitForSubIdMapping(self):
@@ -489,7 +489,7 @@ class PermctlRegtest:
         """
         import tempfile
 
-        self.m_have_caps_support = False
+        self.have_caps_support = False
 
         setcap = shutil.which("setcap")
 
@@ -507,7 +507,7 @@ class PermctlRegtest:
                     stderr=subprocess.DEVNULL
                 )
 
-                self.m_have_caps_support = True
+                self.have_caps_support = True
             except subprocess.CalledProcessError:
                 pass
 
@@ -522,8 +522,8 @@ class PermctlRegtest:
         # simply operate directly in /tmp in a tmpfs, since we're in a
         # mount namespace we don't leave behind garbage this way, we
         # don't even need to unmount.
-        self.m_fake_root = "/tmp"
-        self.mountTmpFS(self.m_fake_root)
+        self.fake_root = "/tmp"
+        self.mountTmpFS(self.fake_root)
 
         # for permctl to find a production-like environment, we need
         # to own the root filesystem '/', thus let's chroot into /tmp,
@@ -535,7 +535,7 @@ class PermctlRegtest:
 
         for src in bind_dirs:
 
-            dst = self.m_fake_root + src
+            dst = self.fake_root + src
 
             if os.path.islink(src):
                 os.symlink(os.readlink(src), dst)
@@ -548,34 +548,42 @@ class PermctlRegtest:
         # mount a new proc corresponding to our forked pid namespace
         # unless this is disabled, to test permctl behaviour without /proc
         if not skip_proc:
-            new_proc = self.m_fake_root + "/proc"
+            new_proc = self.fake_root + "/proc"
             os.mkdir(new_proc)
             self.mountProc(new_proc)
 
         # also bind-mount the permissions repo e.g. useful for
         # debugging
-        self.mountTmpFS(self.m_fake_root + "/usr/src")
-        permissions_repo_dst = self.m_fake_root + "/usr/src/permissions"
+        self.mountTmpFS(self.fake_root + "/usr/src")
+        permissions_repo_dst = self.fake_root + "/usr/src/permissions"
         os.makedirs(permissions_repo_dst)
         self.bindMount(
-            self.m_permissions_repo, permissions_repo_dst,
+            self.permissions_repo, permissions_repo_dst,
         )
 
-        self.mountTmpFS(self.m_fake_root + "/usr/local")
-        local_bin = self.m_fake_root + self.getPermctlPath()
+        # bind-mount our fake rpm script into /usr/bin
+        # /usr/local/bin won't do in case there's RPM installed in the host
+        fake_rpm = os.path.dirname(__file__) + "/rpm.py"
+        self.bindMount(fake_rpm, self.fake_root + "/usr/bin/rpm", read_only=True, recursive=False)
+
+        # create an empty data area for the fake RPM to use
+        self.mountTmpFS(self.fake_root + "/var/lib/rpm")
+
+        self.mountTmpFS(self.fake_root + "/usr/local")
+        local_bin = self.fake_root + self.getPermctlPath()
         os.makedirs(os.path.dirname(local_bin), exist_ok=True)
         # copy the current permctl into a suitable location of
         # the fake root FS
-        shutil.copy(self.m_permctl_orig, local_bin)
+        shutil.copy(self.permctl_orig, local_bin)
 
         # make a writeable home available for the user namespace root
         # user
-        root_home = self.m_fake_root + "/root"
+        root_home = self.fake_root + "/root"
         os.makedirs(root_home)
         self.mountTmpFS(root_home)
 
         # finally enter the fake root
-        os.chroot(self.m_fake_root)
+        os.chroot(self.fake_root)
         # use a defined standard umask
         os.umask(0o022)
         # use a defined standard PATH list, include sbin
@@ -611,10 +619,10 @@ class PermctlRegtest:
 
     def buildPermctl(self):
 
-        if self.m_args.skip_build:
-            if not os.path.exists(self.m_permctl_orig):
+        if self.args.skip_build:
+            if not os.path.exists(self.permctl_orig):
                 print("Couldn't find compiled permctl binary in",
-                      self.m_permctl_orig, file=sys.stderr)
+                      self.permctl_orig, file=sys.stderr)
                 sys.exit(2)
 
             return
@@ -622,29 +630,29 @@ class PermctlRegtest:
         self.printHeading("Rebuilding test version of permctl")
         print()
 
-        buildtype = "debug" if self.m_args.build_debug else "debugoptimized"
+        buildtype = "debug" if self.args.build_debug else "debugoptimized"
         settings = []
         # this causes a debug version with additional libasan routines
         # to be built for testing
         # asan requires /proc so don't use it if we don't mount it
-        if not self.m_args.skip_proc:
+        if not self.args.skip_proc:
             settings.append("-Dtestbuild=true")
 
         try:
             meson_config_args = ["--buildtype", buildtype] + settings
-            if not os.path.exists(self.m_args.buildtree):
-                os.makedirs(self.m_args.buildtree)
+            if not os.path.exists(self.args.buildtree):
+                os.makedirs(self.args.buildtree)
                 subprocess.check_call(
-                    ["meson", "setup"] + meson_config_args + [self.m_args.buildtree],
-                    cwd=self.m_permissions_repo
+                    ["meson", "setup"] + meson_config_args + [self.args.buildtree],
+                    cwd=self.permissions_repo
                 )
             else:
                 subprocess.check_call(
                     ["meson", "configure"] + meson_config_args,
-                    cwd=self.m_args.buildtree,
+                    cwd=self.args.buildtree,
                 )
             print()
-            subprocess.check_call(["meson", "compile"], cwd=self.m_args.buildtree)
+            subprocess.check_call(["meson", "compile"], cwd=self.args.buildtree)
             print()
         except subprocess.CalledProcessError:
             color_printer.setRed()
@@ -653,7 +661,7 @@ class PermctlRegtest:
 
     def run(self, tests):
 
-        if self.m_args.list_tests:
+        if self.args.list_tests:
             tests = [T() for T in tests]
             max_len = max([len(t.getName()) for t in tests])
             for test in tests:
@@ -671,10 +679,10 @@ class PermctlRegtest:
 
         self.buildPermctl()
 
-        self.setupFakeRoot(self.m_args.skip_proc)
+        self.setupFakeRoot(self.args.skip_proc)
         self.checkCapsSupport()
 
-        if self.m_args.enter_fakeroot:
+        if self.args.enter_fakeroot:
             print("Entering shell in fake root")
             self.enterShell()
             sys.exit(0)
@@ -688,7 +696,7 @@ class PermctlRegtest:
             test = Test()
             test.setMainTestInstance(self)
 
-            if self.m_args.test and test.getName() != self.m_args.test:
+            if self.args.test and test.getName() != self.args.test:
                 continue
 
             tests_run += 1
@@ -720,15 +728,15 @@ class PermctlRegtest:
                 color_printer.setRed()
                 print("Test FAILED")
                 color_printer.reset()
-                if self.m_args.on_error_enter_shell:
+                if self.args.on_error_enter_shell:
                     print("Entering shell after failed test")
                     self.enterShell()
 
-        if self.m_args.test and tests_run == 0:
-            print("No such test", self.m_args.test)
+        if self.args.test and tests_run == 0:
+            print("No such test", self.args.test)
             tests_failed += 1
 
-        if self.m_args.after_test_enter_shell:
+        if self.args.after_test_enter_shell:
             print("Entering shell after test execution")
             self.enterShell()
 
@@ -756,18 +764,18 @@ class TestBase:
 
     def __init__(self, desc):
 
-        self.m_profiles = ("easy", "secure", "paranoid")
-        self.m_local_profile = "local"
+        self.profiles = ("easy", "secure", "paranoid")
+        self.local_profile = "local"
 
-        self.m_test_name = type(self).__name__
-        self.m_test_desc = desc
-        self.m_result = 0
-        self.m_warnings = 0
-        self.m_errors = 0
-        self.m_main_test_instance = None
+        self.test_name = type(self).__name__
+        self.test_desc = desc
+        self.result = 0
+        self.warnings = 0
+        self.errors = 0
+        self.main_test_instance = None
 
     def setMainTestInstance(self, instance):
-        self.m_main_test_instance = instance
+        self.main_test_instance = instance
 
     def getProfilePath(self, profile):
         base = TestBase.config_root + "/usr/share/permissions/permissions"
@@ -793,19 +801,19 @@ class TestBase:
         return TestBase.config_root + "/usr/share/permissions/variables.conf"
 
     def getName(self):
-        return self.m_test_name
+        return self.test_name
 
     def getResult(self):
-        return self.m_result
+        return self.result
 
     def setResult(self, code):
-        self.m_result = code
+        self.result = code
 
     def getNumErrors(self):
-        return self.m_errors
+        return self.errors
 
     def getNumWarnings(self):
-        return self.m_warnings
+        return self.warnings
 
     def createAndGetTestDir(self, mode):
         d = "/{}".format(self.getName())
@@ -823,13 +831,13 @@ class TestBase:
         os.chmod(path, mode)
 
     def getDescription(self):
-        return self.m_test_desc
+        return self.test_desc
 
     def prepare(self):
         if not TestBase.global_init_performed:
 
-            TestBase.config_root = self.m_main_test_instance.getPermctlConfigRoot()
-            TestBase.permctl = self.m_main_test_instance.getPermctlPath()
+            TestBase.config_root = self.main_test_instance.getPermctlConfigRoot()
+            TestBase.permctl = self.main_test_instance.getPermctlPath()
 
             config_root = TestBase.config_root
 
@@ -848,7 +856,7 @@ class TestBase:
 
     def postrun(self):
 
-        if self.m_errors != 0:
+        if self.errors != 0:
             self.setResult(1)
 
     def resetConfigs(self):
@@ -862,16 +870,20 @@ class TestBase:
             central_perms,
         ]
 
-        candidates.append(self.getUserProfilePath(self.m_local_profile))
+        candidates.append(self.getUserProfilePath(self.local_profile))
         for package_d in PER_PACKAGE_CONFIG_DIRS.values():
             candidates.extend(glob.glob(config_root + package_d + "/*"))
-        candidates.extend([self.getProfilePath(profile) for profile in self.m_profiles])
+        candidates.extend([self.getProfilePath(profile) for profile in self.profiles])
 
         for cand in candidates:
             try:
                 os.unlink(cand)
             except FileNotFoundError:
                 pass
+
+        # create an empty fake RPM database
+        with open("/var/lib/rpm/Packages.db", 'w') as _:
+            pass
 
         # permctl expects the base files to exist, otherwise warnings
         # are emitted
@@ -891,7 +903,7 @@ class TestBase:
 
         def getAgnosticProfilePath(profile):
 
-            if profile == self.m_local_profile:
+            if profile == self.local_profile:
                 return self.getUserProfilePath(profile)
             else:
                 return self.getProfilePath(profile)
@@ -912,8 +924,13 @@ class TestBase:
                 for line in lines:
                     profile_file.write(line + "\n")
 
-    def buildProfileLine(self, path, mode, owner="root", group="root", caps=[], acl=[]):
-        ret = "{} {}:{} {}".format(
+    def buildProfileLine(self, path, mode, owner="root", group="root", caps=[], acl=[], packages=[]):
+        ret = ""
+
+        if packages:
+            ret += ":package: {}\n".format(','.join(packages if isinstance(packages, list) else [packages]))
+
+        ret += "{} {}:{} {}".format(
             path, owner, group,
             format(mode, '04o')
         )
@@ -982,17 +999,17 @@ class TestBase:
         color_printer.setRed()
         print("FAILURE:", *args, **kwargs)
         color_printer.reset()
-        self.m_errors += 1
+        self.errors += 1
 
     def printWarning(self, *args, **kwargs):
 
         color_printer.setYellow()
         print("WARNING:", *args, **kwargs)
         color_printer.reset()
-        self.m_warnings += 1
+        self.warnings += 1
 
     def complainOnMissingSubIdSupport(self):
-        if self.m_main_test_instance.haveSubIdSupport():
+        if self.main_test_instance.haveSubIdSupport():
             return False
 
         self.printWarning("skipping this test since there is no sub*id support available")
@@ -1153,7 +1170,7 @@ class TestBase:
             )
             return
 
-        subprocess.check_output( [setfacl, '-m', perms, path])
+        subprocess.check_output([setfacl, '-m', perms, path])
 
     def callPermctl(self, args):
         """Calls permctl passing the given command line arguments. The
@@ -1239,4 +1256,8 @@ class TestBase:
     def _checkForASANErrors(self, line):
         if line.find("LeakSanitizer: detected memory leaks") != -1:
             self.printError("ASAN found memory leaks!")
-            self.m_errors += 1
+            self.errors += 1
+
+    def addRpmDbEntry(self, pkg, path):
+        with open("/var/lib/rpm/Packages.db", 'a') as rpmdb:
+            rpmdb.write(f"{pkg} {path}\n")

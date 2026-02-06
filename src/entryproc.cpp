@@ -465,14 +465,49 @@ bool EntryProcessor::matchingPkg() const {
     // acceptable risk, if PATH is messed up in the context of `permctl` then
     // there are bigger things to worry about.
     //
-    // This will return the package basename like "bash".
+    // This will return the space separated list of package basenames like "bash systemd".
+    //
+    // For the space separation a trailing space needs to be added to the
+    // queryformat. splitWords() will take care of the trailing space at the
+    // end of the list.
     try {
-        const auto pkg = getSubprocessOutput({"rpm", "-qf", m_path, "--queryformat", "%{NAME}"});
-        const auto matches = m_entry.packages.count(pkg) != 0;
-        if (!matches && m_args.verbose.isSet()) {
+        int code;
+        const auto output = getSubprocessOutput({"rpm", "-qf", m_path, "--queryformat", "%{NAME} "}, code);
+
+        if (code != 0) {
+            /*
+             * RPM exits with status 1 here and displays the "error" message
+             * on stdout.
+             */
+            if (output.find("is not owned by any package") != output.npos) {
+                return false;
+            }
+
+            std::cerr << m_path << ": rpm sub-process exited with " << code << ". Cannot determine package ownership.\n";
+            return false;
+        }
+
+        const auto pkgs = splitWords(output);
+
+        for (const auto &pkg: pkgs) {
+            if (m_entry.packages.count(pkg) != 0)
+                return true;
+        }
+
+        if (m_args.verbose.isSet()) {
             std::cout << m_path
-                << ": file belongs to package '" << pkg << "' which does not match this entry (only suitable for: ";
+                << ": file belongs to package(s) '";
+            
             bool first = true;
+            for (const auto &pkg: pkgs) {
+                if (!first)
+                    std::cout << " ";
+                std::cout << pkg;
+                first = false;
+            }
+           
+            std::cout << "' which does not match this entry (only suitable for: ";
+            first = true;
             for (const auto &allowed: m_entry.packages) {
                 if (!first)
                     std::cout << ", ";
@@ -481,14 +516,11 @@ bool EntryProcessor::matchingPkg() const {
             }
             std::cout << ")" << std::endl;
         }
-        return matches;
+        return false;
     } catch (const std::runtime_error &ex) {
         std::cerr << m_path
             << ": internal error trying to invoke `rpm` for package ownership check: "
             << ex.what() << std::endl;
-    } catch (const int status) {
-        std::cerr << m_path
-            << ": rpm sub-process exited with " << status << ". Cannot determine package ownership.\n";
     }
 
     // assume no match in error cases
