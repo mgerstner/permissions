@@ -14,7 +14,9 @@
 # --system` to adjust the files on disk.
 
 # ceph log directory (bsc#1150366)
+:package: ceph-common
 /var/log/ceph/                                          ceph:ceph         3770
 
 # icingaweb2 (bsc#1211314)
+:package: icingaweb2-common
 /etc/icingaweb2/enabledModules/                         root:icingaweb2   2770
