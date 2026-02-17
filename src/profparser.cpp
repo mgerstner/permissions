@@ -73,42 +73,40 @@ void ProfileParser::parse(const std::string &path, std::ifstream &fs) {
     }
 }
 
-void ProfileParser::parsePackageLine(const std::string &line) {
-        auto parts = splitWords(line);
+void ProfileParser::parsePackageLine(std::string line) {
+        const std::string PREFIX{":package: "};
 
-        if (parts[0] != ":package:") {
+        if (!hasPrefix(line, PREFIX)) {
             printDiagnostic("bad :package: line");
             return;
-        } else if (parts.size() < 2) {
-            printDiagnostic("missing package list");
-            return;
-        } else if (parts.size() > 2 && parts[2][0] != '#') {
+        }
+
+        line = line.substr(PREFIX.length());
+
+        if (const auto comment_pos = line.find('#'); comment_pos != line.npos) {
             // we ignore any trailing comments which can be used for
             // documentation purposes here (e.g. review bsc#)
-            // but we don't accept random trailing garbage
-            printDiagnostic("unexpected field encountered after package names");
-            return;
+            line = line.substr(0, comment_pos);
         }
 
         // reset current package context and fill it with the new information
         m_parse_context.packages.clear();
 
-        auto packages = parts[1];
-
         // parse comma separate list of packages
-        while (!packages.empty()) {
-            auto sep = packages.find_last_of(',');
-            if (sep == packages.npos)
+        while (!line.empty()) {
+            auto sep = line.find_last_of(',');
+            if (sep == line.npos)
                 // last package name remaining
                 sep = 0;
-            const auto package = packages.substr(sep ? sep + 1 : 0);
+            // we accept whitespace between commas, so strip it
+            const auto package = stripped(line.substr(sep ? sep + 1 : 0));
             // a double comma could lead to an empty component here, ignore it
             if (!package.empty()) {
                 m_parse_context.packages.insert(package);
             }
             // clear string starting from the separator position (or the whole
             // string, if no separator present).
-            packages.erase(sep);
+            line.erase(sep);
         }
 }
 
