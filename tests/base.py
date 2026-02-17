@@ -1257,6 +1257,19 @@ class TestBase:
         if line.find("LeakSanitizer: detected memory leaks") != -1:
             self.printError("ASAN found memory leaks!")
 
+    def scanPermctlOutputForErrors(self, output):
+
+        package_errors = (
+            "bad :package:",
+            "missing package list",
+            "unexpected field encountered")
+
+        for line in output:
+            self._checkForASANErrors(line)
+            for err in package_errors:
+                if line.find(err) != -1:
+                    self.printError(f"encountered package line parsing error: {line}")
+
     def addRpmDbEntry(self, pkg, path):
         with open("/var/lib/rpm/Packages.db", 'a') as rpmdb:
             rpmdb.write(f"{pkg} {path}\n")

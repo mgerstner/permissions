@@ -1458,6 +1458,8 @@ class TestPackageCoupling(TestBase):
         self.createTestFile(f"{testdir}/multi-pkg-match", 0o440)
         # a file owned by multiple packages of which none matches
         self.createTestFile(f"{testdir}/multi-pkg-mismatch", 0o440)
+        # a file owned by multiple packages
+        self.createTestFile(f"{testdir}/multi-pkg-spaces", 0o444)
 
         entries = []
 
@@ -1470,6 +1472,13 @@ class TestPackageCoupling(TestBase):
         # to make sure the previous package setting is no longer in effect.
         entries.append(self.buildProfileLine(f"{testdir}/multi-pkg-match", 0o775, packages=["pkg2", "pkg3"]))
         entries.append(self.buildProfileLine(f"{testdir}/multi-pkg-mismatch", 0o775))
+        # test multi-package assignment with spaces in-between, a trailing comma and a trailing comment
+        # the first :package: directive is to test the error case, if the
+        # second directive is not parsed correctly then ownership will be
+        # changed, erroneously, which we will detect below.
+        entries.append(f":package: pkg10")
+        entries.append(f":package: pkg2, pkg3, # test entry")
+        entries.append(f"{testdir}/multi-pkg-spaces root:root 0775")
 
         self.addRpmDbEntry("pkg1", f"{testdir}/single-pkg")
         self.addRpmDbEntry("pkg2", f"{testdir}/wrong-pkg")
@@ -1477,19 +1486,26 @@ class TestPackageCoupling(TestBase):
         self.addRpmDbEntry("pkg3", f"{testdir}/multi-pkg-match")
         self.addRpmDbEntry("pkg1", f"{testdir}/multi-pkg-mismatch")
         self.addRpmDbEntry("pkg4", f"{testdir}/multi-pkg-mismatch")
+        self.addRpmDbEntry("pkg10", f"{testdir}/multi-pkg-spaces")
 
         self.addProfileEntries({"easy": entries})
 
-        for name in ("single-pkg", "wrong-pkg", "multi-pkg-match", "multi-pkg-mismatch"):
+        for name in ("single-pkg", "wrong-pkg", "multi-pkg-match", "multi-pkg-mismatch", "multi-pkg-spaces"):
             self.printMode(f"{testdir}/{name}")
 
         self.switchSystemProfile("easy")
-        self.applySystemProfile()
+        res, output = self.applySystemProfile()
+
+        if res != 0:
+            self.printError("error while applying profiles")
+        else:
+            self.scanPermctlOutputForErrors(output)
 
         # these should all be left untouched
         self.assertMode(f"{testdir}/no-pkg", 0o440)
         self.assertMode(f"{testdir}/wrong-pkg", 0o440)
         self.assertMode(f"{testdir}/multi-pkg-mismatch", 0o440)
+        self.assertMode(f"{testdir}/multi-pkg-spaces", 0o444)
         # these should be corrected
         self.assertMode(f"{testdir}/single-pkg", 0o775)
         self.assertMode(f"{testdir}/multi-pkg-match", 0o775)
