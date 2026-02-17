@@ -89,7 +89,7 @@ protected: // functions
     void parseExtraLine(const std::string &line);
 
     /// Parses a ":package:" specification line as found in permission profiles.
-    void parsePackageLine(const std::string &line);
+    void parsePackageLine(std::string line);
 
     /// Parses extra "+capabilities" lines in permission profiles.
     /**
