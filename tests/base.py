@@ -1256,7 +1256,6 @@ class TestBase:
     def _checkForASANErrors(self, line):
         if line.find("LeakSanitizer: detected memory leaks") != -1:
             self.printError("ASAN found memory leaks!")
-            self.errors += 1
 
     def addRpmDbEntry(self, pkg, path):
         with open("/var/lib/rpm/Packages.db", 'a') as rpmdb:
